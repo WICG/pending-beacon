@@ -115,7 +115,7 @@ The `PendingBeacon` class would support the following methods/properties:
 <li>“deactivated”
 
 <p>
-A beacon starts in the ‘pending’ state. Calling deactivate() on the beacon moves it to the ‘deactivated’ state. The beacon will be moved to the ‘sent’ state as soon as the browser starts sending the beacon (nb: the beacon becomes ‘sent’ even if the beacon send fails).</li></ul>
+A beacon starts in the ‘pending’ state. Calling deactivate() on the beacon moves it to the ‘deactivated’ state. The beacon moves to the 'sending’ state as soon as the browser starts sending the beacon, and moves to 'sent' or 'failed' depending on if the beacon send succeeded or failed.</li></ul>
 
    </td>
   </tr>
