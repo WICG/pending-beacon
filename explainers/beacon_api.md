@@ -5,12 +5,12 @@ Authors: [Darren Willis](https://github.com/darrenw) - Google
 
 ## Stateful Javascript Page Unload Beacon API
 
-This document is an explainer for a system for sending beacons when pages are unloaded, that uses a stateful API rather than having developers explicitly send beacons themselves.
+This document is an explainer for a system for sending beacons when documents are discarded, that uses a stateful API rather than having developers explicitly send beacons themselves.
 
 
 ## Problem And Motivation
 
-Web developers have a need for ‘beaconing’ - that is, sending a bundle of data to a backend server, without expecting a particular response, ideally at the ‘end’ of a user’s visit to a page. There are currently [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web: adding <img> tags inside dismissal events, sending a sync XMLHTTPRequest (note: doesn’t work as part of dismissal events),  the Navigator.sendBeacon API, and using the fetch API with the ‘keepalive’ flag. (There may be other methods; these are the main ones). These methods all suffer from reliability problems, stemming from one core issue: There is not an ideal time in a page’s lifecycle to make the Javascript call to send out the beacon. ‘unload’ and ‘beforeUnload’ are unreliable (and outright ignored by several major browsers), and pageHide and visibilityChanged have [issues](https://github.com/w3c/page-visibility/issues/59) on mobile platforms.
+Web developers have a need for ‘beaconing’ - that is, sending a bundle of data to a backend server, without expecting a particular response, ideally at the ‘end’ of a user’s visit to a page. There are currently [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web: adding <img> tags inside dismissal events, sending a sync XMLHTTPRequest (note: doesn’t work as part of dismissal events),  the Navigator.sendBeacon API, and using the fetch API with the ‘keepalive’ flag. (There may be other methods; these are the main ones). These methods all suffer from reliability problems, stemming from one core issue: There is not an ideal time in a page’s lifecycle to make the Javascript call to send out the beacon. ‘unload’ and ‘beforeunload’ are unreliable (and outright ignored by several major browsers), and pagehide and visibilitychange have [issues](https://github.com/w3c/page-visibility/issues/59) on mobile platforms.
 
 To simplify this issue and make beaconing more reliable, we propose adding a stateful Javascript API where a page can register that it wants a beacon (or beacons)  issued when it unloads or the page is hidden. Developers can populate beacon(s) with data as the user uses the page, and the browser ensures beacon(s) are reliably sent at some point in time. This frees developers from worrying about which part of the page lifecycle to send their beacon calls in.
 
@@ -24,17 +24,17 @@ Provide a conservatively scoped API, which allows website authors to specify one
 
 
 
-*   The beacon should be sent at or close to page unload time.
+*   The beacon should be sent at or close to document discard time.
     *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (bfcache eviction), or after a developer-specified timeout (using the `setPageHideTimeout` method described below) 
     *   For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 *   The beacon destination URL should be modifiable.
 *   The beacon should be cancelable.
-*   The beacon should be visible to (and blockable by) extensions.
+*   The beacon should be visible to (and blockable by) extension, to give users control over beacons if they so choose (as they do over current beaconing techniques).
 
 
 ## Design
 
-Our basic idea is to extend the existing Javascript beacon API by adding a stateful version. Rather than a developer calling navigator.sendBeacon(), the developer registers that they would like to send a beacon for this page when it unloads, and the browser returns a handle to an object that represents a beacon that the browser promises to send on page unload (whenever that is). The developer can then call methods on this registered beacon handle to populate it with data. Then, at some point later after the user leaves the page, the browser will send the beacon. From the point of view of the developer the exact beacon send time is unknown.
+Our basic idea is to extend the existing Javascript beacon API by adding a stateful version. Rather than a developer calling navigator.sendBeacon(), the developer registers that they would like to send a beacon for this document when it gets discarded, and the browser returns a handle to an object that represents a beacon that the browser promises to send on document discard(whenever that is). The developer can then call methods on this registered beacon handle to populate it with data. Then, at some point later after the user leaves the page, the browser will send the beacon. From the point of view of the developer the exact beacon send time is unknown.
 
 
 ### JavaScript API
@@ -88,7 +88,7 @@ The `PendingBeacon` class would support the following methods/properties:
   <tr>
    <td><code>sendNow()</code>
    </td>
-   <td>Send the current beacon data immediately. Beacons are only ever sent once, so a beacon sent via <code>sendNow()</code> will not be re-sent on page unload or <code>pageHideTimeout</code>. Calling <code>sendNow()</code>on a beacon in any <code>state</code> other than “pending” will throw an exception.
+   <td>Send the current beacon data immediately. Beacons are only ever sent once, so a beacon sent via <code>sendNow()</code> will not be re-sent on document discardor <code>pageHideTimeout</code>. Calling <code>sendNow()</code>on a beacon in any <code>state</code> other than “pending” will throw an exception.
    </td>
   </tr>
   <tr>
@@ -100,7 +100,7 @@ The `PendingBeacon` class would support the following methods/properties:
   <tr>
    <td><code>pageHideTimeout</code>
    </td>
-   <td>Defaults to null. If set, a timeout in milliseconds after page hide, after which a beacon will be queued for sending, regardless of whether or not the page has been unloaded yet. If this is null when the page is hidden, the beacon will be sent on page unload (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pageHide; bundling/batching of beacons is possible.
+   <td>Defaults to null. If set, a timeout in milliseconds after the next pagehide event is sent, after which a beacon will be queued for sending, regardless of whether or not the document has been discarded yet. If this is null when the page is hidden, the beacon will be sent on document discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible.
    </td>
   </tr>
   <tr>
@@ -143,7 +143,7 @@ This document intentionally leaves out the browser-side implementation details o
 
 
 
-*   Bundling/batching of beacons. Beacons do not need to be sent instantly on page unload, and particularly for mobile devices, batching may improve radio efficiency.
+*   Bundling/batching of beacons. Beacons do not need to be sent instantly on document discard, and particularly for mobile devices, batching may improve radio efficiency.
 *   Robustness against crashes/forced terminations/network outages. 
 *   User privacy (see next section).
 
@@ -161,8 +161,8 @@ Another privacy concern is with crash/network resilience (if an implementation d
 
 A DOM-based API was considered as an alternative to this approach. This API would consist of a new possible ‘beacon’ value for the ‘rel’ attribute on the link tag, which developers could use to indicate a beacon, and then use standard DOM manipulation calls to change the data, cancel the beacon, etc.
 
-The stateful JS API was preferred because (TODO: why was the stateful JS API preferred? RUM vendors prefer not to intrude on the DOM, other reasons?)
+The stateful JS API was preferred to avoid beacon concerns intruding into the DOM, and because a ‘DOM-based’ API would still require scripting in many cases anyway (populating beacon data as the user interacts with the page, for example).
 
-**BFCache-supported ‘onUnLoad’-like event**
+**BFCache-supported ‘unload’-like event**
 
-Another alternative is to introduce (yet) another page lifecycle event, that would be essentially onUnload, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on unload from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a Javascript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
+Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a Javascript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
