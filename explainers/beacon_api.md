@@ -10,9 +10,18 @@ This document is an explainer for a system for sending beacons when documents ar
 
 ## Problem And Motivation
 
-Web developers have a need for ‘beaconing’ - that is, sending a bundle of data to a backend server, without expecting a particular response, ideally at the ‘end’ of a user’s visit to a page. There are currently [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web: adding <img> tags inside dismissal events, sending a sync XMLHTTPRequest (note: doesn’t work as part of dismissal events),  the Navigator.sendBeacon API, and using the fetch API with the ‘keepalive’ flag. (There may be other methods; these are the main ones). These methods all suffer from reliability problems, stemming from one core issue: There is not an ideal time in a page’s lifecycle to make the Javascript call to send out the beacon. ‘unload’ and ‘beforeunload’ are unreliable (and outright ignored by several major browsers), and pagehide and visibilitychange have [issues](https://github.com/w3c/page-visibility/issues/59) on mobile platforms.
+Web developers have a need for ‘beaconing’ - that is, sending a bundle of data to a backend server, without expecting a particular response, ideally at the ‘end’ of a user’s visit to a page. There are currently [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web:
 
-To simplify this issue and make beaconing more reliable, we propose adding a stateful Javascript API where a page can register that it wants a beacon (or beacons)  issued when it unloads or the page is hidden. Developers can populate beacon(s) with data as the user uses the page, and the browser ensures beacon(s) are reliably sent at some point in time. This frees developers from worrying about which part of the page lifecycle to send their beacon calls in.
+*   Adding `<img>` tags inside dismissal events.
+*   Sending a sync [`XMLHttpRequest`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest). Note: doesn’t work as part of dismissal events.
+*   The [`Navigator.sendBeacon`][sendBeacon-api] API.
+*   Using the [`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/fetch) API with the `keepalive` flag.
+
+(There may be other methods; these are the main ones.)
+
+These methods all suffer from reliability problems, stemming from one core issue: There is not an ideal time in a page’s lifecycle to make the Javascript call to send out the beacon. [`unload`](https://developer.mozilla.org/en-US/docs/Web/API/Window/unload_event) and [`beforeunload`](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event) are unreliable (and outright ignored by several major browsers), and [`pagehide`](https://developer.mozilla.org/en-US/docs/Web/API/Window/pagehide_event) and [`visibilitychange`](https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event) have [issues](https://github.com/w3c/page-visibility/issues/59) on mobile platforms.
+
+To simplify this issue and make beaconing more reliable, we propose adding a stateful Javascript API where a page can register that it wants a beacon (or beacons) issued when it unloads or the page is hidden. Developers can populate beacon(s) with data as the user uses the page, and the browser ensures beacon(s) are reliably sent at some point in time. This frees developers from worrying about which part of the page lifecycle to send their beacon calls in.
 
 
 ## Goals
@@ -22,10 +31,8 @@ Provide a conservatively scoped API, which allows website authors to specify one
 
 ## Requirements
 
-
-
 *   The beacon should be sent at or close to document discard time.
-    *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (bfcache eviction), or after a developer-specified timeout (using the `setPageHideTimeout` method described below) 
+    *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction), or after a developer-specified timeout (using the `'pageHideTimeout'` described below)
     *   For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 *   The beacon destination URL should be modifiable.
 *   The beacon should be cancelable.
@@ -46,13 +53,11 @@ Our basic idea is to extend the existing Javascript beacon API by adding a state
 beacon = new PendingBeacon(url, options = {});
 ```
 
+An instance of `PendingBeacon` represents a beacon that will be sent by the browser at some point in the future. The `url` parameter is the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s parameter. Note that multiple instances of `PendingBeacon` can be made, so multiple beacons can be sent to multiple endpoints. The `options` parameter would be a dictionary that optionally allows specifying the `'method'` and `'pageHideTimeout'` properties for the beacon (these properties are described below).
 
-An instance of `PendingBeacon` represents a beacon that will be sent by the browser at some point in the future. The `url` parameter is the same as the existing [sendBeacon](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon)’s parameter . Note that multiple instances of `PendingBeacon` can be made, so multiple beacons can be sent to multiple endpoints. The `options` parameter would be a dictionary that optionally allows specifying the `'method'` and `'pageHideTimeout'` properties for the beacon (these properties are described below).
-
-Note that calling the PendingBeacon constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand). 
+Note that calling the PendingBeacon constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `PendingBeacon` class would support the following methods/properties:
-
 
 <table>
   <tr>
@@ -77,12 +82,6 @@ The `PendingBeacon` class would support the following methods/properties:
    <td><code>setData(data)</code>
    </td>
    <td>Set the current beacon data. The data argument would take the same types as the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon">sendBeacon</a> method’s data parameter (that is: “A <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer">ArrayBuffer</a></code>, <code><a href="https://developer.mozilla.org/en-US/docs/Web/API/ArrayBufferView">ArrayBufferView</a></code>, <code><a href="https://developer.mozilla.org/en-US/docs/Web/API/Blob">Blob</a></code>, <code><a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMString">DOMString</a></code>, <code><a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">FormData</a></code>, or <code><a href="https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams">URLSearchParams</a></code> object containing the data to send.”)
-   </td>
-  </tr>
-  <tr>
-   <td><code>getData()</code>
-   </td>
-   <td>Get the current beacon data as a deserialized object. Note this will not be the same object as was passed to <code>setData()</code>
    </td>
   </tr>
   <tr>
@@ -121,8 +120,7 @@ A beacon starts in the ‘pending’ state. Calling deactivate() on the beacon m
   </tr>
 </table>
 
-
-Requests sent by the pending beacon will include cookies (the same as requests from <code>[navigator.sendBeacon](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon)</code>).
+Requests sent by the pending beacon will include cookies (the same as requests from <code>[navigator.sendBeacon][sendBeacon-api]</code>).
 
 
 ### Payload
@@ -141,10 +139,8 @@ Beacons will be sent with the [resource type](https://developer.mozilla.org/en-U
 
 This document intentionally leaves out the browser-side implementation details of how beacons will be sent, this section is here merely to note that there are several considerations browser authors may want to keep in mind:
 
-
-
 *   Bundling/batching of beacons. Beacons do not need to be sent instantly on document discard, and particularly for mobile devices, batching may improve radio efficiency.
-*   Robustness against crashes/forced terminations/network outages. 
+*   Robustness against crashes/forced terminations/network outages.
 *   User privacy (see next section).
 
 
@@ -152,8 +148,13 @@ This document intentionally leaves out the browser-side implementation details o
 
 This design has limited privacy ramifications above the existing beaconing methods - it extends the existing beacon API and makes it more reliable. However, it may break existing means that users have of blocking beaconing - since the browser itself sends beacons ‘behind the scenes’ (so to speak), special support may be needed to allow extension authors to block the sending (or registering) of beacons.
 
-Another privacy concern is with crash/network resilience (if an implementation decides to include these) - while it is desirable for registered beacons to be sent when the browser recovers from a crash or network outage, this has the potential to cause beacons registered while the user was on network A to be sent while the user is on network B - this could expose sensitive data.
-
+Specifically, beacons will have the following privacy requirements:
+*   Beacons must be sent over HTTPS
+*   Beacons are only sent over the same network that was active when the beacon was registered (e.g. if the user goes offline and moves to a new network, discard pending beacons)
+*   Delete beacons for a site if a user clears site data.
+*   Beacons registered in an incognito session do not persist to disk
+*   Follow third-party cookie rules for beacons
+*   Post-unload beacons are not sent if background sync is disabled for a site.
 
 ## Alternatives considered
 
@@ -166,3 +167,6 @@ The stateful JS API was preferred to avoid beacon concerns intruding into the DO
 **BFCache-supported ‘unload’-like event**
 
 Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a Javascript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
+
+
+[sendBeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
