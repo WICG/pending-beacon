@@ -149,11 +149,11 @@ This document intentionally leaves out the browser-side implementation details o
 This design has limited privacy ramifications above the existing beaconing methods - it extends the existing beacon API and makes it more reliable. However, it may break existing means that users have of blocking beaconing - since the browser itself sends beacons ‘behind the scenes’ (so to speak), special support may be needed to allow extension authors to block the sending (or registering) of beacons.
 
 Specifically, beacons will have the following privacy requirements:
-*   Beacons must be sent over HTTPS
-*   Beacons are only sent over the same network that was active when the beacon was registered (e.g. if the user goes offline and moves to a new network, discard pending beacons)
-*   Delete beacons for a site if a user clears site data.
-*   Beacons registered in an incognito session do not persist to disk
-*   Follow third-party cookie rules for beacons
+*   Beacons must be sent over HTTPS.
+*   Beacons are only sent over the same network that was active when the beacon was registered (e.g. if the user goes offline and moves to a new network, discard pending beacons).
+*   Delete pending beacons for a site if a user clears site data.
+*   Beacons registered in an incognito session do not persist to disk.
+*   Follow third-party cookie rules for beacons.
 *   Post-unload beacons are not sent if background sync is disabled for a site.
 
 ## Alternatives considered
@@ -166,7 +166,7 @@ The stateful JS API was preferred to avoid beacon concerns intruding into the DO
 
 **BFCache-supported ‘unload’-like event**
 
-Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a Javascript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
+Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a JavaScript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
 
 
 [sendBeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
