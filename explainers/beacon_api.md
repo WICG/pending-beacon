@@ -4,8 +4,6 @@
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
 
-## Stateful JavaScript Page Unload Beacon API
-
 This document is an explainer for a system for sending beacons when pages are discarded, that uses a stateful API rather than having developers explicitly send beacons themselves.
 
 
@@ -73,14 +71,112 @@ The `PendingBeacon` class would support the following methods/properties:
 | *Method/Property Name* | *Description* |
 | ---------------------- | ------------- |
 | `url` | Property reflecting the target endpoint of the pending beacon. Can be reset to point the beacon to a new endpoint.      |
-| `method` | Accessor property defining the method used to send the beacon. A string matching either “GET” or “POST”. By default, “POST” is used. |
+| `method` | Accessor property defining the method used to send the beacon. A string matching either `'GET'` or `'POST'`. By default, `'POST'` is used. |
 | `deactivate()` | Deactivate (cancel) the pending beacon. |
-| `setData(data)` | Set the current beacon data. The data argument would take the same types as the [sendBeacon][sendBeacon-api] method’s data parameter (that is: “A [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], [`DOMString`][DOMString-api], [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api] object containing the data to send.”)      |
-| `sendNow()` | Send the current beacon data immediately. Beacons are only ever sent once, so a beacon sent via `sendNow()` will not be re-sent on page discardor `pageHideTimeout`. Calling `sendNow()` on a beacon in any `state` other than “pending” will throw an exception. |
-| `pageHideTimeout` | Defaults to `null`. If set, a timeout in milliseconds after the next pagehide event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is null when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. |
-| `state` | A property holding the current state of the beacon, which may be one of: “pending”, “sending”, “sent”, “failed”, “deactivated”. A beacon starts in the ‘pending’ state. Calling deactivate() on the beacon moves it to the ‘deactivated’ state. The beacon moves to the 'sending’ state as soon as the browser starts sending the beacon, and moves to 'sent' or 'failed' depending on if the beacon send succeeded or failed. |
+| `setData(data)` | Set the current beacon data. The `data` argument would take the same types as the [sendBeacon][sendBeacon-api] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], [`DOMString`][DOMString-api], [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
+| `sendNow()` | Send the current beacon data immediately. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
+| `pageHideTimeout` | Defaults to `null`. If set, a timeout in milliseconds after the next `pagehide` event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is null when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. |
+| `isPending` | A property that returns whether the beacon is still ‘pending’; that is, whether or not the beacon has started the sending process. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
 
-Requests sent by the pending beacon will include cookies (the same as requests from [`navigator.sendBeacon`][sendBeacon-api]).
+
+### API Discussion: Failure Handling
+
+One fundamental question to this API design is how the failure should be handled. Consider the following use cases:
+
+*   Users would like to ensure the beacon is sent successfully. But `sendNow()` or the browser may fail to send beacon requests.
+*   Users would like to update the beacon's data or property before sending. But `setData()`, `url`, `method`, or `pageHideTimeout` may fail to update, if called after the beacon is being sent.
+
+
+#### By User (API Provides Minimal Control)
+
+In this proposal, the browser should be responsible for retrying failed requests, and the update-related APIs should be always available. Users have no access to beacon states.
+
+*   When a send request fails, no matther it is a `sendNow()` or a browser request, the browser should make attempts to retry the request.
+    *  A `retries` can be provided in the constructor to set the maximum number of attempts.
+    *  An exception can still be thrown on `sendNow()` failure, in case users want to be aware. Note that exceptions cannot be thrown on page discard.
+*   Updating to an existing beacon would never fail by making every instance of `PendingBeacon` reusable:
+    *   If a beacon is sent, it can still be updated and sent again.
+    *   Whether a beacon should be re-sent on page discard or `pageHideTimeout` after calling `sendNow()` can be configurable.
+*   Users have no access to beacon state like `isPending`, request failed, or request sent.
+
+Specifically for `setData()`, there are 2 usage patterns the API can support:
+
+
+##### `mode: 'replace'`
+
+The data is always fully replaced. It is OK to send the data at any time and the browser should ensure that the final value is always delivered. This could be used to communicate the total-so-far of some metrics.
+
+```
+beacon.setData('123')
+beacon.sendNow()  // Sends out '123'
+beacon.sendNow()  // Sends out '123'
+```
+
+
+##### `mode: 'append'`
+
+The data is always appended-to. A send request here means flush any unsent data. It's OK to send at any time and we want to ensure that everything up to the last appended value is delivered.
+
+```
+beacon.setData('123')
+beacon.sendNow()  // Sends out '123'
+beacon.sendNow()  // Sends out nothing
+```
+
+
+The overall usage would be very simple. Users could trigger any calls whenever they want.
+
+The advantage of this proposal is that users can just keep using the same beacon forever and never worry about whether it is already sent. Sending is 100% write-only with no feedback to JavaScript at all. It works best for the send-and-forget use case.
+
+
+#### By User (API Provides Fine-Grained Control)
+
+In this proposal, the browser is only responsible for making requests, and the update-related APIs may not work as expected per beacon state. Users have access to some beacon states and have to handle them.
+
+*   When a send request fails,
+    *   If it is a `sendNow()`, the API may inform users of the beacon state by
+        *  A bool return value (for sync API).
+        *  A promise (for async API).
+        *  An exception.
+    *   If it is a browser request, users may only approximate by some beacon state `isFailed`.
+*   Updating to an existing beacon may fail. Users have to rely on the beacon state `isPending` to know if the beacon is sent.
+
+
+##### Race Condition in Sync & Async API
+
+The problem with users accessing beacon states is that a state can be outdated right after access, due to the fact that a beacon can be sent by the browser at any time.
+
+
+###### Sync API
+
+In sync API design, race can happen between any calls:
+
+```
+beacon = new PendingBeacon(url, {pageHideTimeout: 1000});
+if (beacon.isPending) {  // true, as `beacon` is just created.
+  // At this line, the page goes into BFCache as the user navigates away.
+  // The browser sends out `beacon` after 1 second timeout.
+  // The user navigates back, and the page is unfrozen.
+  beacon.setData(newData);
+}
+```
+
+
+###### Async API
+
+In async API design, race can still happen after a promise resolves.
+
+```
+beacon = new PendingBeacon(url, {pageHideTimeout: 1000});
+beacon.isPending().then(() => {
+  // At this line, the page goes into BFCache as the user navigates away.
+  // The browser sends out `beacon` after 1 second timeout.
+  // The user navigates back, and the page is unfrozen.
+  beacon.setData(newData);
+});
+```
+
+This may be solved by restricting when the browser is allowed to send or by dropping `isPending` and just relying on async `setData()` to resolve/reject.
 
 
 ### Payload
@@ -89,6 +185,7 @@ The payload for the beacon will depend on the method used for sending the beacon
 
 For beacons sent via a GET request, the data will be encoded as query parameters in form application/x-www-form-urlencoded.
 
+Requests sent by the pending beacon will include cookies (the same as requests from [`navigator.sendBeacon`][sendBeacon-api]).
 
 ### Extensions
 
@@ -101,7 +198,7 @@ This document intentionally leaves out the browser-side implementation details o
 
 *   Bundling/batching of beacons. Beacons do not need to be sent instantly on page discard, and particularly for mobile devices, batching may improve radio efficiency.
 *   Robustness against crashes/forced terminations/network outages.
-*   User privacy (see next section).
+*   User privacy. See the [Privacy](#privacy) section.
 
 
 ## Privacy
