@@ -212,6 +212,7 @@ Specifically, beacons will have the following privacy requirements:
 *   Beacons registered in an incognito session do not persist to disk.
 *   Follow third-party cookie rules for beacons.
 *   Post-unload beacons are not sent if background sync is disabled for a site.
+*   If a page is suspended (for instance, as part of a [bfcache](https://web.dev/bfcache/)), beacons should be sent within 10 minutes or less of suspension, to keep the beacon send temporally close to the user's page visit.
 
 
 ## Alternatives Considered
