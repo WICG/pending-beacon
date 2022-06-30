@@ -37,9 +37,16 @@ Provide a conservatively scoped API, which allows website authors to specify one
     *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction), or after a developer-specified timeout (using the `'pageHideTimeout'` described below)
     *   For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 *   The beacon destination URL should be modifiable.
-*   The beacon should be cancelable.
 *   The beacon should be visible to (and blockable by) extension, to give users control over beacons if they so choose (as they do over current beaconing techniques).
 
+One possible requirement that is missing some clarity is
+
+*   The beacon should be cancelable.
+
+This introduces many implementation complications in a multi-process browser.
+In order to be resilient to crashes, the beacons must have a presence outside of their process
+but in order to be cancellable (without race conditions) the state in process must be authoritative.
+If we do not need perfectly cancellable beacons then the [alternative write-only API](#write-only-api) becomes possible.
 
 ## Design
 
@@ -216,16 +223,49 @@ Specifically, beacons will have the following privacy requirements:
 
 ## Alternatives Considered
 
-**DOM-Based API**
+### DOM-Based API
 
 A DOM-based API was considered as an alternative to this approach. This API would consist of a new possible ‘beacon’ value for the ‘rel’ attribute on the link tag, which developers could use to indicate a beacon, and then use standard DOM manipulation calls to change the data, cancel the beacon, etc.
 
 The stateful JS API was preferred to avoid beacon concerns intruding into the DOM, and because a ‘DOM-based’ API would still require scripting in many cases anyway (populating beacon data as the user interacts with the page, for example).
 
-**BFCache-supported ‘unload’-like event**
+### BFCache-supported ‘unload’-like event
 
 Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a JavaScript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
 
+### Write-only API
+
+This is similar to the proposed API but there is no `isPending` and no `setData`.
+There are 2 classes of beacon with a base class that has
+
+- `url`
+- `method`
+- `sendNow()`
+- `deactivate()`
+- API for specifying timeouts
+
+With these APIs, the page cannot check whether the beacon has been sent already.
+
+It's unclear that these APIs can satisfy all use cases.
+If they can, they have the advantage of being easier to implement
+and simple to use.
+
+#### AppendableBeacon
+
+Has `appendData(data)` which appends new data to the beacon's payload. The beacon will flush queued payload according to the timeouts and the browser state.
+
+The use-case is for continuously logging events that are accumulated on the server side.
+
+#### ReplaceableBeacon
+
+Has `replaceData(data)` which replaces the current the beacon's payload.
+The beacon will send the payload according to the timeouts and the browser state.
+If a payload has been sent already, replaceData simply stores a new payload to be sent in the future.
+
+The use case is for logging a total-so-far.
+The server would typically only pay attention to the latest value.
+
+# Referecnces
 
 [sendBeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
 [sendBeacon-w3]: https://www.w3.org/TR/beacon/#sec-sendBeacon-method
