@@ -135,7 +135,7 @@ or it will not be crash-resilient and it will also have many of the same problem
 #### Async implementation
 
 With an async implementation, the code above is has a race condition. `isPending()` may return true but the beacon may be sent immediately after in another process.
-This forces us to have an async API where JS can attempt to set new data is is informed afterwards as to whether that succeeded.
+This forces us to have an async API where JS can attempt to set new data and is informed afterwards as to whether that succeeded.
 E.g.
 
 ```js
@@ -216,8 +216,6 @@ If a payload has been sent already, replaceData simply stores a new payload to b
 
 The use case is for logging a total-so-far.
 The server would typically only pay attention to the latest value.
-
-# Referecnces
 
 [sendBeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
 [sendBeacon-w3]: https://www.w3.org/TR/beacon/#sec-sendBeacon-method
