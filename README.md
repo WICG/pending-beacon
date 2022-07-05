@@ -152,7 +152,7 @@ beacon.setData(newData).then(() => {
 
 ```
 
-The code above is still not correct.
+The code above is *still not correct*.
 The call to `setData` does not block and so there may be multiple outstanding calls to `setData`
 now their `catch` code has to be coordinated so that only one replacement beacon is created
 and the latest data is set on the beacon
