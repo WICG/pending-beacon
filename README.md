@@ -77,13 +77,13 @@ The `PendingBeacon` class would support the following methods/properties:
 
 | *Method/Property Name* | *Description* |
 | ---------------------- | ------------- |
-| `url` | A [`USVString`][USVString] property reflecting the target URL endpoint of the pending beacon. Can be reset to point the beacon to a new endpoint.      |
+| `url` | A string property reflecting the target URL endpoint of the pending beacon. Can be reset to point the beacon to a new endpoint.      |
 | `method` | A property defining the HTTP method used to send the beacon. Its value is a string matching either `'GET'` or `'POST'`. Default to `'POST'`. |
 | `deactivate()` | Deactivate (cancel) the pending beacon. |
-| `setData(data)` | Set the current beacon data. The `data` argument would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], [`USVString`][USVString], [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
-| `sendNow()` | Send the current beacon data immediately. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
+| `setData(data)` | Set the current beacon data. The `data` argument would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `string`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. |
+| `sendNow()` | Send the current beacon data immediately. |
 | `pageHideTimeout` | Defaults to `null`. If set, a timeout in milliseconds after the next `pagehide` event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is null when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. |
-| `isPending` | A property that returns whether the beacon is still ‘pending’; that is, whether or not the beacon has started the sending process. (See the [API Discussion: Failure Handling](#discussion-failure-handling) section for possible behaviors.) |
+| `isPending` | A property that returns whether the beacon is still ‘pending’; that is, whether or not the beacon has started the sending process. |
 
 ### Payload
 
@@ -226,4 +226,3 @@ The server would typically only pay attention to the latest value.
 [Blob-api]: https://developer.mozilla.org/en-US/docs/Web/API/Blob
 [FormData-api]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [URLSearchParams-api]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-[
