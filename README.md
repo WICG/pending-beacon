@@ -82,7 +82,7 @@ The `PendingBeacon` class would support the following methods/properties:
 | `deactivate()` | Deactivate (cancel) the pending beacon. |
 | `setData(data)` | Set the current beacon data. The `data` argument would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `string`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. |
 | `sendNow()` | Send the current beacon data immediately. |
-| `pageHideTimeout` | Defaults to `-1`. If set >= 0, a timeout in milliseconds after the next `pagehide` event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is `-1` when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. |
+| `pageHideTimeout` | Defaults to `-1`. If set >= 0, a timeout in milliseconds after the next `pagehide` event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is `-1` when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. The maximum value is 10 minutes, or 600,000 milliseconds. |
 | `isPending` | An immutable property that returns whether the beacon is still ‘pending’; that is, whether or not the beacon has started the sending process. |
 
 Note that attempting to assign a value to any of the properties will have no observable effect.
@@ -173,6 +173,7 @@ Specifically, beacons will have the following privacy requirements:
 *   Beacons registered in an incognito session do not persist to disk.
 *   Follow third-party cookie rules for beacons.
 *   Post-unload beacons are not sent if background sync is disabled for a site.
+*   If a page is suspended (for instance, as part of a [bfcache](https://web.dev/bfcache/)), beacons should be sent within 10 minutes or less of suspension, to keep the beacon send temporally close to the user's page visit.
 
 
 ## Alternatives Considered
