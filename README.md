@@ -54,7 +54,9 @@ The basic idea is to extend the existing JavaScript beacon API by adding a state
 
 ### JavaScript API
 
- In detail, the proposed design are a new JavaScript class [`PendingBeacon`](#pendingbeacon) and two of its sub-class [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon).
+ In detail, the proposed design includes a new JavaScript class [`PendingBeacon`](#pendingbeacon) and two of its sub-class [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon):
+
+---
 
 #### `PendingBeacon`
 
@@ -74,13 +76,15 @@ The `options` parameter would be a dictionary that optionally allows specifying 
 *   `'backgroundTimeout'`
 *   `'timeout'`
 
+A `PendingBeacon` won't be able to update its own request data after construction.
+
 
 ##### Properties
 
 The `PendingBeacon` class would support the following properties:
 
 | *Property Name* | *Description* |
-| ---------------------- | ------------- |
+| --------------- | ------------- |
 | `url` | An immutable `String` property reflecting the target URL endpoint of the pending beacon.  |
 | `method` | An immutable property defining the HTTP method used to send the beacon. Its value is a `string` matching either `'GET'` or `'POST'`. Defaults to `'POST'`. |
 | `backgroundTimeout` | An immutable `Number` property specifying a timeout in milliseconds starting after the page enters the next `hidden` visibility state. If the value >= 0, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet. If the value < 0, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache. The timeout will be reset if the page enters `visible` state again before the timeout expires. Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`, the browser has freedom to bundle/batch multiple beacons. Defaults to `-1`. The maximum value is 10 minutes, or `600,000` milliseconds. |
@@ -95,9 +99,9 @@ Note that attempting to directly assign a value to any of the properties will ha
 The `PendingBeacon` class would support the following methods:
 
 | *Method Name* | *Description* |
-| ---------------------- | ------------- |
-| `deactivate()` | Deactivate (cancel) the pending beacon. |
-| `sendNow()` | Send the current beacon data immediately. |
+| ------------- | ------------- |
+| `deactivate()` | Deactivate (cancel) the pending beacon. If the beacon is already not pending, this won't have any effect. |
+| `sendNow()` | Send the current beacon data immediately. If the beacon is already not pending, this won't have any effect. |
 
 ---
 
@@ -121,6 +125,8 @@ The `options` parameter would be a dictionary that optionally allows specifying 
 The `PendingGETBeacon` class would support [the same properties](#properties) inheriting from
 `PendingBeacon`'s, except with the following differences:
 
+| *Property Name* | *Description* |
+| --------------- | ------------- |
 | `method` | Its value is set to `'GET'`. |
 
 ##### Methods
@@ -128,7 +134,7 @@ The `PendingGETBeacon` class would support [the same properties](#properties) in
 The `PendingGETBeacon` class would support the following additional methods:
 
 | *Method Name* | *Description* |
-| ---------------------- | ------------- |
+| ------------- | ------------- |
 | `setURL(url, options = {})` | Set the current beacon's `url` property. The `url` parameter takes a `String`. The `options` parameter takes a dictionary that optionally allows updating the `timeout` property. |
 
 ---
@@ -153,6 +159,8 @@ The `options` parameter would be a dictionary that optionally allows specifying 
 The `PendingPOSTBeacon` class would support [the same properties](#properties) inheriting from
 `PendingBeacon`'s, except with the following differences:
 
+| *Property Name* | *Description* |
+| --------------- | ------------- |
 | `method` | Its value is set to `'POST'`. |
 
 ##### Methods
@@ -160,7 +168,7 @@ The `PendingPOSTBeacon` class would support [the same properties](#properties) i
 The `PendingPOSTBeacon` class would support the following additional methods:
 
 | *Method Name* | *Description* |
-| ---------------------- | ------------- |
+| ------------- | ------------- |
 | `setData(data, options = {})` | Set the current beacon data. The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. The `options` parameter is a dictionary that optionally allows updating the `timeout` property. |
 
 ---
@@ -260,14 +268,13 @@ A DOM-based API was considered as an alternative to this approach. This API woul
 
 The stateful JS API was preferred to avoid beacon concerns intruding into the DOM, and because a ‘DOM-based’ API would still require scripting in many cases anyway (populating beacon data as the user interacts with the page, for example).
 
-### BFCache-supported ‘unload’-like event
+### BFCache-supported `unload`-like event
 
-Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the “unload” event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a JavaScript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
+Another alternative is to introduce (yet) another page lifecycle event, that would be essentially the `unload` event, but supported by the BFCache - that is, its presence would not disable the BFCache, and the browser would execute this callback even on eviction from the BFCache. This was rejected because it would require allowing pages frozen in the BFCache to execute a JavaScript callback, and it would not be possible to restrict what that callback does (so, a callback could do things other than sending a beacon, which is not safe). It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons, and complicates the already sufficiently complicated page lifecycle.
 
 ### Write-only API
 
-This is similar to the proposed API but there is no `pending` and no `setData`.
-There are 2 classes of beacon with a base class that has
+This is similar to the proposed API but there is no `pending` and no `setData()`. There are 2 classes of beacon with a base class that has
 
 - `url`
 - `method`
