@@ -34,7 +34,7 @@ Provide a conservatively scoped API, which allows website authors to specify one
 ## Requirements
 
 *   The beacon should be sent at or close to page discard time.
-    *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction), or after a developer-specified timeout (using the `'pageHideTimeout'` described below)
+    *   For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction), or after a developer-specified timeout (using [timeout-related properties](#properties) described below)
     *   For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 *   The beacon destination URL should be modifiable.
 *   The beacon should be visible to (and blockable by) extension, to give users control over beacons if they so choose (as they do over current beaconing techniques).
@@ -46,7 +46,7 @@ One possible requirement that is missing some clarity is
 This introduces many implementation complications in a multi-process browser.
 In order to be resilient to crashes, the beacons must have a presence outside of their process
 but in order to be cancellable (without race conditions) the state in process must be authoritative.
-If we do not need perfectly cancellable beacons then the [alternative write-only API](#write-only-api) becomes possible.
+If perfectly cancellable beacons are not needed, then the [alternative write-only API](#write-only-api) becomes possible.
 
 ## Design
 
@@ -54,11 +54,11 @@ The basic idea is to extend the existing JavaScript beacon API by adding a state
 
 ### JavaScript API
 
+ In detail, the proposed design are a new JavaScript class [`PendingBeacon`](#pendingbeacon) and two of its sub-class [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon).
 
-#### Constructor
+#### `PendingBeacon`
 
- In detail, the proposed design is a new class `PendingBeacon`, constructed like so:
-
+##### Constructor
 
 ```
 beacon = new PendingBeacon(url, options = {});
@@ -66,32 +66,110 @@ beacon = new PendingBeacon(url, options = {});
 
 An instance of `PendingBeacon` represents a beacon that will be sent by the browser at some point in the future. Calling this constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
-The `url` parameter is the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter. Note that multiple instances of `PendingBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
+The `url` parameter is a string that specifies the value of the `url` property. It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does. Note that multiple instances of `PendingBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
 
-The `options` parameter would be a dictionary that optionally allows specifying the `'method'` and `'pageHideTimeout'` properties for the beacon (described below).
+The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
+
+*   `'method'`
+*   `'backgroundTimeout'`
+*   `'timeout'`
 
 
-#### Methods & Properties
+##### Properties
 
-The `PendingBeacon` class would support the following methods/properties:
+The `PendingBeacon` class would support the following properties:
 
-| *Method/Property Name* | *Description* |
+| *Property Name* | *Description* |
 | ---------------------- | ------------- |
-| `url` | An immutable string property reflecting the target URL endpoint of the pending beacon.  |
-| `method` | An immutable property defining the HTTP method used to send the beacon. Its value is a string matching either `'GET'` or `'POST'`. Defaults to `'POST'`. |
-| `deactivate()` | Deactivate (cancel) the pending beacon. |
-| `setData(data)` | Set the current beacon data. The `data` argument would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `string`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. |
-| `sendNow()` | Send the current beacon data immediately. |
-| `pageHideTimeout` | Defaults to `-1`. If set >= 0, a timeout in milliseconds after the next `pagehide` event is sent, after which a beacon will be queued for sending, regardless of whether or not the page has been discarded yet. If this is `-1` when the page is hidden, the beacon will be sent on page discard (including eviction from the BFCache). Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after pagehide; bundling/batching of beacons is possible. The maximum value is 10 minutes, or 600,000 milliseconds. |
-| `isPending` | An immutable property that returns whether the beacon is still ‘pending’; that is, whether or not the beacon has started the sending process. |
+| `url` | An immutable `String` property reflecting the target URL endpoint of the pending beacon.  |
+| `method` | An immutable property defining the HTTP method used to send the beacon. Its value is a `string` matching either `'GET'` or `'POST'`. Defaults to `'POST'`. |
+| `backgroundTimeout` | An immutable `Number` property specifying a timeout in milliseconds starting after the page enters the next `hidden` visibility state. If the value >= 0, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet. If the value < 0, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache. The timeout will be reset if the page enters `visible` state again before the timeout expires. Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`, the browser has freedom to bundle/batch multiple beacons. Defaults to `-1`. The maximum value is 10 minutes, or `600,000` milliseconds. |
+| `timeout` | An immutable `Number` property representing a timeout in milliseconds starting immediately after its value is specified. If the value < 0, the timeout won't start. Defaults to `-1`. |
+| `pending` | An immutable `Boolean` property that returns `true` if the beacon has **not** yet started the sending process. Returns `false` if it is being sent, fails to send, or deactivated. |
 
-Note that attempting to assign a value to any of the properties will have no observable effect.
+Note that attempting to directly assign a value to any of the properties will have no observable effect.
+
+
+##### Methods
+
+The `PendingBeacon` class would support the following methods:
+
+| *Method Name* | *Description* |
+| ---------------------- | ------------- |
+| `deactivate()` | Deactivate (cancel) the pending beacon. |
+| `sendNow()` | Send the current beacon data immediately. |
+
+---
+
+#### `PendingGETBeacon`
+
+The `PendingGETBeacon` class provides additional methods for manipulating a beacon's GET request data even after constructed.
+
+##### Constructor
+
+```
+beacon = new PendingGETBeacon(url, options = {});
+```
+
+The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
+
+*   `'backgroundTimeout'`
+*   `'timeout'`
+
+##### Properties
+
+The `PendingGETBeacon` class would support [the same properties](#properties) inheriting from
+`PendingBeacon`'s, except with the following differences:
+
+| `method` | Its value is set to `'GET'`. |
+
+##### Methods
+
+The `PendingGETBeacon` class would support the following additional methods:
+
+| *Method Name* | *Description* |
+| ---------------------- | ------------- |
+| `setURL(url, options = {})` | Set the current beacon's `url` property. The `url` parameter takes a `String`. The `options` parameter takes a dictionary that optionally allows updating the `timeout` property. |
+
+---
+
+#### `PendingPOSTBeacon`
+
+The `PendingPOSTBeacon` class provides additional methods for manipulating a beacon's POST request data even after constructed.
+
+##### Constructor
+
+```
+beacon = new PendingPOSTBeacon(url, options = {});
+```
+
+The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
+
+*   `'backgroundTimeout'`
+*   `'timeout'`
+
+##### Properties
+
+The `PendingPOSTBeacon` class would support [the same properties](#properties) inheriting from
+`PendingBeacon`'s, except with the following differences:
+
+| `method` | Its value is set to `'POST'`. |
+
+##### Methods
+
+The `PendingPOSTBeacon` class would support the following additional methods:
+
+| *Method Name* | *Description* |
+| ---------------------- | ------------- |
+| `setData(data, options = {})` | Set the current beacon data. The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter. That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api]. The `options` parameter is a dictionary that optionally allows updating the `timeout` property. |
+
+---
 
 ### Payload
 
 The payload for the beacon will depend on the method used for sending the beacon. If sent using a POST request, the beacon’s data will be included in the body of the POST request exactly as when [`navigator.sendBeacon`][sendBeacon-api] is used.
 
-For beacons sent via a GET request, the data will be encoded as query parameters in form application/x-www-form-urlencoded.
+For beacons sent via a GET request, there will be no request body.
 
 Requests sent by the pending beacon will include cookies (the same as requests from [`navigator.sendBeacon`][sendBeacon-api]).
 
@@ -109,39 +187,37 @@ This document intentionally leaves out the browser-side implementation details o
 
 ### Sync vs Async implementation
 
-The problem with users accessing beacon states (e.g. `isPending()`) is that it forces us to choose between a synchronous API (that is harder to implement)
-or an asynchronous API (that is harder to use).
+The problem with users accessing beacon states, e.g. `pending`, is that it forces us to choose between a synchronous API (that is harder to implement) or an asynchronous API (that is harder to use).
 
-#### Sync implementation
+#### Sync implementation (chosen)
 
-With a syncAPI design, the process running JS is authoritate for the state of the beacon
+With a syncAPI design, the process running JS is authoritative for the state of the beacon
 and the following code is correct.
 
 ```js
-beacon = new PendingBeacon(url, {pageHideTimeout: 1000});
+beacon = new PendingBeacon(url, {backgroundTimeout: 1000});
 beacon.setData(initialData);
 window.setTimeout(() => {
   // By the time this runs, the beacon might have been sent.
   // So check before settings data.
-  if (!beacon.isPending) {
+  if (!beacon.pending) {
     beacon = new PendingBeacon(...);
   }
   beacon.setData(newData);
 }, someTimeout);
 ```
 
-However this is harder to implement since we now have to coordinate multiple processes
-The JS process cannot be the only process involved in the beacon
-or it will not be crash-resilient and it will also have many of the same problems that an `unload` event handler has.
+However this is harder to implement since the browser now have to coordinate multiple processes
+The JS process cannot be the only process involved in the beacon or it will not be crash-resilient and it will also have many of the same problems that an `unload` event handler has.
 
 #### Async implementation
 
-With an async implementation, the code above is has a race condition. `isPending()` may return true but the beacon may be sent immediately after in another process.
+With an async implementation, the [code above](#sync-implementation-chosen) has a race condition. `pending` may return true but the beacon may be sent immediately after in another process.
 This forces us to have an async API where JS can attempt to set new data and is informed afterwards as to whether that succeeded.
 E.g.
 
 ```js
-beacon = new PendingBeacon(url, {pageHideTimeout: 1000});
+beacon = new PendingBeacon(url, {backgroundTimeout: 1000});
 beacon.setData(initialData);
 ...
 beacon.setData(newData).then(() => {
@@ -190,7 +266,7 @@ Another alternative is to introduce (yet) another page lifecycle event, that wou
 
 ### Write-only API
 
-This is similar to the proposed API but there is no `isPending` and no `setData`.
+This is similar to the proposed API but there is no `pending` and no `setData`.
 There are 2 classes of beacon with a base class that has
 
 - `url`
@@ -204,6 +280,9 @@ With these APIs, the page cannot check whether the beacon has been sent already.
 It's unclear that these APIs can satisfy all use cases.
 If they can, they have the advantage of being easier to implement
 and simple to use.
+
+
+### High-Level APIs
 
 #### AppendableBeacon
 
