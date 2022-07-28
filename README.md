@@ -54,49 +54,32 @@ The basic idea is to extend the existing JavaScript beacon API by adding a state
 
 ### JavaScript API
 
- In detail, the proposed design includes a new JavaScript class [`PendingBeacon`](#pendingbeacon) and two of its sub-class [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon):
+ In detail, the proposed design includes a new interface [`PendingBeacon`](#pendingbeacon), and two of its implementations [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon):
 
 ---
 
 #### `PendingBeacon`
 
-##### Constructor
-
-```
-beacon = new PendingBeacon(url, options = {});
-```
-
-An instance of `PendingBeacon` represents a beacon that will be sent by the browser at some point in the future. Calling this constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
-
-The `url` parameter is a string that specifies the value of the `url` property. It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does. Note that multiple instances of `PendingBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
-
-The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
-
-*   `'method'`
-*   `'backgroundTimeout'`
-*   `'timeout'`
-
-A `PendingBeacon` won't be able to update its own request data after construction.
-
+`PendingBeacon` defines the common properties & methods representing a beacon. However, it should not be constructed directly. Use [`PendingGETBeacon`](#pendinggetbeacon) or [`PendingPOSTBeacon`](#pendingpostbeacon) instead.
 
 ##### Properties
 
-The `PendingBeacon` class would support the following properties:
+The `PendingBeacon` class define the following properties:
 
 | *Property Name* | *Description* |
 | --------------- | ------------- |
 | `url` | An immutable `String` property reflecting the target URL endpoint of the pending beacon.  |
-| `method` | An immutable property defining the HTTP method used to send the beacon. Its value is a `string` matching either `'GET'` or `'POST'`. Defaults to `'POST'`. |
+| `method` | An immutable property defining the HTTP method used to send the beacon. Its value is a `string` matching either `'GET'` or `'POST'`. |
 | `backgroundTimeout` | An immutable `Number` property specifying a timeout in milliseconds starting after the page enters the next `hidden` visibility state. If the value >= 0, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet. If the value < 0, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache. The timeout will be reset if the page enters `visible` state again before the timeout expires. Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`, the browser has freedom to bundle/batch multiple beacons. Defaults to `-1`. The maximum value is 10 minutes, or `600,000` milliseconds. |
 | `timeout` | An immutable `Number` property representing a timeout in milliseconds starting immediately after its value is specified. If the value < 0, the timeout won't start. Defaults to `-1`. |
-| `pending` | An immutable `Boolean` property that returns `true` if the beacon has **not** yet started the sending process. Returns `false` if it is being sent, fails to send, or deactivated. |
+| `pending` | An immutable `Boolean` property that returns `true` if the beacon has **not** yet started the sending process and not yet deactivated. Returns `false` if it is being sent, fails to send, or deactivated. |
 
 Note that attempting to directly assign a value to any of the properties will have no observable effect.
 
 
 ##### Methods
 
-The `PendingBeacon` class would support the following methods:
+The `PendingBeacon` class define the following methods:
 
 | *Method Name* | *Description* |
 | ------------- | ------------- |
@@ -107,13 +90,17 @@ The `PendingBeacon` class would support the following methods:
 
 #### `PendingGETBeacon`
 
-The `PendingGETBeacon` class provides additional methods for manipulating a beacon's GET request data even after constructed.
+The `PendingGETBeacon` class provides additional methods for manipulating a beacon's GET request data.
 
 ##### Constructor
 
 ```
 beacon = new PendingGETBeacon(url, options = {});
 ```
+
+An instance of `PendingGETBeacon` represents a beacon that will be sent by the browser at some point in the future. Calling this constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
+
+The `url` parameter is a string that specifies the value of the `url` property. It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does. Note that multiple instances of `PendingGETBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -148,6 +135,10 @@ The `PendingPOSTBeacon` class provides additional methods for manipulating a bea
 ```
 beacon = new PendingPOSTBeacon(url, options = {});
 ```
+
+An instance of `PendingPOSTBeacon` represents a beacon that will be sent by the browser at some point in the future. Calling this constructor queues the beacon for sending by the browser; even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
+
+The `url` parameter is a string that specifies the value of the `url` property. It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does. Note that multiple instances of `PendingPOSTBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
