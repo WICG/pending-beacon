@@ -76,7 +76,7 @@ From the point of view of the developer the exact beacon send time is unknown.
 ### JavaScript API
 
  In detail, the proposed design includes a new interface [`PendingBeacon`](#pendingbeacon),
- and two of its implementations [`PendingGETBeacon`](#pendinggetbeacon) and [`PendingPOSTBeacon`](#pendingpostbeacon):
+ and two of its implementations [`PendingGetBeacon`](#pendinggetbeacon) and [`PendingPostBeacon`](#pendingpostbeacon):
 
 ---
 
@@ -84,7 +84,7 @@ From the point of view of the developer the exact beacon send time is unknown.
 
 `PendingBeacon` defines the common properties & methods representing a beacon.
 However, it should not be constructed directly.
-Use [`PendingGETBeacon`](#pendinggetbeacon) or [`PendingPOSTBeacon`](#pendingpostbeacon) instead.
+Use [`PendingGetBeacon`](#pendinggetbeacon) or [`PendingPostBeacon`](#pendingpostbeacon) instead.
 
 ##### Properties
 
@@ -123,23 +123,24 @@ The `PendingBeacon` class define the following methods:
 
 ---
 
-#### `PendingGETBeacon`
+#### `PendingGetBeacon`
 
-The `PendingGETBeacon` class provides additional methods for manipulating a beacon's GET request data.
+The `PendingGetBeacon` class provides additional methods for manipulating a beacon's GET request data.
 
 ##### Constructor
 
 ```js
-beacon = new PendingGETBeacon(url, options = {});
+beacon = new PendingGetBeacon(url, options = {});
 ```
 
-An instance of `PendingGETBeacon` represents a beacon that will be sent by the browser at some point in the future.
+An instance of `PendingGetBeacon` represents a `GET` beacon that will be sent by the browser at some point in the future.
 Calling this constructor queues the beacon for sending by the browser;
-even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
+even if the result goes out of scope,
+the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
 It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
-Note that multiple instances of `PendingGETBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
+Calling the constructor with `url`=`null`/`undefined` will result in an exception.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -148,36 +149,38 @@ The `options` parameter would be a dictionary that optionally allows specifying 
 
 ##### Properties
 
-The `PendingGETBeacon` class would support [the same properties](#properties) inheriting from
+The `PendingGetBeacon` class would support [the same properties](#properties) inheriting from
 `PendingBeacon`'s, except with the following differences:
 
 * `method`: Its value is set to `'GET'`.
 
 ##### Methods
 
-The `PendingGETBeacon` class would support the following additional methods:
+The `PendingGetBeacon` class would support the following additional methods:
 
 * `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`.
 
 ---
 
-#### `PendingPOSTBeacon`
+#### `PendingPostBeacon`
 
-The `PendingPOSTBeacon` class provides additional methods for manipulating a beacon's POST request data even after constructed.
+The `PendingPostBeacon` class provides additional methods for manipulating a beacon's POST request data.
 
 ##### Constructor
 
 ```js
-beacon = new PendingPOSTBeacon(url, options = {});
+beacon = new PendingPostBeacon(url, options = {});
 ```
 
-An instance of `PendingPOSTBeacon` represents a beacon that will be sent by the browser at some point in the future.
-Calling this constructor queues the beacon for sending by the browser;
-even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
+An instance of `PendingPostBeacon` represents a `POST` beacon.
+Simply calling this constructor will **not** queue the beacon for sending.
+Instead, a `POST` beacon will **only be queued** by the browser for sending at some point in the future if it has non-`undefined` and non-`null` data.
+After it is queued, even if the instance goes out of scope,
+the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
 It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
-Note that multiple instances of `PendingPOSTBeacon` can be made, so multiple beacons can be sent to multiple url endpoints.
+Calling the constructor with `url`=`null`/`undefined` will result in an exception.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -186,20 +189,23 @@ The `options` parameter would be a dictionary that optionally allows specifying 
 
 ##### Properties
 
-The `PendingPOSTBeacon` class would support [the same properties](#properties) inheriting from
+The `PendingPostBeacon` class would support [the same properties](#properties) inheriting from
 `PendingBeacon`'s, except with the following differences:
 
 * `method`: Its value is set to `'POST'`.
+* `timeout`: The timer only starts after its value is set or updated **and** `setData(data)` has ever been called with non-`null` and non-`undefined` data.
 
 ##### Methods
 
-The `PendingPOSTBeacon` class would support the following additional methods:
+The `PendingPostBeacon` class would support the following additional methods:
 
 * `setData(data)`: Set the current beacon data.
   The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter.
   That is, one of [`ArrayBuffer`][ArrayBuffer-api],
   [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`,
   [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api].
+  If `data` is not `undefined` and not `null`, the browser will queue the beacon for sending,
+  which means it kicks off the timer for `timeout` property (if set) and the timer for `backgroundTimeout` property.
 
 ---
 
