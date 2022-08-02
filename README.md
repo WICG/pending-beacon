@@ -45,11 +45,14 @@ that should be sent reliably when the page is being unloaded.
 ## Requirements
 
 * The beacon should be sent at or close to page discard time.
-  * For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction), or after a developer-specified timeout (using [timeout-related properties](#properties) described below)
-  * For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
+  * For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction),
+    or after a developer-specified timeout
+    (using [timeout-related properties](#properties) described below).
+  * For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched
+    (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 * The beacon destination URL should be modifiable.
 * The beacon should be visible to (and blockable by) extension,
-    to give users control over beacons if they so choose (as they do over current beaconing techniques).
+  to give users control over beacons if they so choose (as they do over current beaconing techniques).
 
 One possible requirement that is missing some clarity is
 
@@ -63,7 +66,8 @@ If perfectly cancellable beacons are not needed, then the [alternative write-onl
 ## Design
 
 The basic idea is to extend the existing JavaScript beacon API by adding a stateful version.
-Rather than a developer calling `navigator.sendBeacon`, the developer registers that they would like to send a beacon for this page when it gets discarded,
+Rather than a developer calling `navigator.sendBeacon`,
+the developer registers that they would like to send a beacon for this page when it gets discarded,
 and the browser returns a handle to an object that represents a beacon that the browser promises to send on page discard (whenever that is).
 The developer can then call methods on this registered beacon handle to populate it with data.
 Then, at some point later after the user leaves the page, the browser will send the beacon.
@@ -90,15 +94,15 @@ The `PendingBeacon` class define the following properties:
 * `method`: An immutable property defining the HTTP method used to send the beacon.
   Its value is a `string` matching either `'GET'` or `'POST'`.
 * `backgroundTimeout`: A mutable `Number` property specifying a timeout in milliseconds whether the timer starts after the page enters the next `hidden` visibility state.
-  If setting the value >= 0, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet.
-  If the value < 0, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache.
+  If setting the value `>= 0`, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet.
+  If the value `< 0`, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache.
   The timeout will be reset if the page enters `visible` state again before the timeout expires.
   Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
   because the browser has freedom to bundle/batch multiple beacons,
   and the browser might send out earlier than specified value (see [Privacy](#privacy)).
   Defaults to `-1`.
 * `timeout`: A mutable `Number` property representing a timeout in milliseconds where the timer starts immediately after its value is set or updated.
-  If the value < 0, the timer won't start.
+  If the value `< 0`, the timer won't start.
   Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
   the browser has freedom to bundle/batch multiple beacons,
   and the browser might send out earlier than specified value (see [Privacy](#privacy)).
@@ -167,7 +171,8 @@ The `PendingPOSTBeacon` class provides additional methods for manipulating a bea
 beacon = new PendingPOSTBeacon(url, options = {});
 ```
 
-An instance of `PendingPOSTBeacon` represents a beacon that will be sent by the browser at some point in the future. Calling this constructor queues the beacon for sending by the browser;
+An instance of `PendingPOSTBeacon` represents a beacon that will be sent by the browser at some point in the future.
+Calling this constructor queues the beacon for sending by the browser;
 even if the result goes out of scope, the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
@@ -190,8 +195,11 @@ The `PendingPOSTBeacon` class would support [the same properties](#properties) i
 
 The `PendingPOSTBeacon` class would support the following additional methods:
 
-* `setData(data)`: Set the current beacon data. The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter.
-  That is, one of [`ArrayBuffer`][ArrayBuffer-api], [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`, [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api].
+* `setData(data)`: Set the current beacon data.
+  The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter.
+  That is, one of [`ArrayBuffer`][ArrayBuffer-api],
+  [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`,
+  [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api].
 
 ---
 
