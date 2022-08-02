@@ -2,13 +2,16 @@
 
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
+[![GitHub Super-Linter](https://github.com/WICG/unload-beacon/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter)
+
 This document is an explainer for a system for sending beacons when pages are discarded,
 that uses a stateful API rather than having developers explicitly send beacons themselves.
 
 ## Problem And Motivation
 
 Web developers have a need for *‘beaconing’* -
-that is, sending a bundle of data to a backend server, without expecting a particular response, ideally at the ‘end’ of a user’s visit to a page.
+that is, sending a bundle of data to a backend server, without expecting a particular response,
+ideally at the ‘end’ of a user’s visit to a page.
 There are currently
 [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web:
 
@@ -360,7 +363,7 @@ and simple to use.
 Has `appendData(data)` which appends new data to the beacon's payload.
 The beacon will flush queued payload according to the timeouts and the browser state.
 
-The use-case is for continuously logging events that are accumulated on the server side.
+The use-case is for continuously logging events that are accumulated on the server-side.
 
 #### ReplaceableBeacon
 
