@@ -143,7 +143,6 @@ the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
 It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
-Calling the constructor with `url`=`null`/`undefined` will result in an exception.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -183,7 +182,6 @@ the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
 It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
-Calling the constructor with `url`=`null`/`undefined` will result in an exception.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -208,7 +206,7 @@ The `PendingPostBeacon` class would support the following additional methods:
   [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`,
   [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api].
   If `data` is not `undefined` and not `null`, the browser will queue the beacon for sending,
-  which means it kicks off the timer for `timeout` property (if set) and the timer for `backgroundTimeout` property.
+  which means it kicks off the timer for `timeout` property (if set) and the timer for `backgroundTimeout` property (after the page enters `hidden` state).
 
 ---
 
@@ -363,7 +361,7 @@ and simple to use.
 Has `appendData(data)` which appends new data to the beacon's payload.
 The beacon will flush queued payload according to the timeouts and the browser state.
 
-The use-case is for continuously logging events that are accumulated on the server-side.
+The use-case is for continuously logging events that are accumulated on the server side.
 
 #### ReplaceableBeacon
 
