@@ -2,7 +2,9 @@
 
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
-[![GitHub Super-Linter](https://github.com/WICG/unload-beacon/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter)
+[![Super-Linter](https://github.com/WICG/unload-beacon/workflows/linter.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/super-linter.yml)
+[![Spec Prod](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml)
+
 
 This document is an explainer for a system for sending beacons when pages are discarded,
 that uses a stateful API rather than having developers explicitly send beacons themselves.
