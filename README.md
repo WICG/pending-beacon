@@ -305,8 +305,8 @@ special support may be needed to allow extension authors to block the sending (o
 Specifically, beacons will have the following privacy requirements:
 
 * Beacons must be sent over HTTPS.
-* Beacons are only sent over the same network that was active when the beacon was registered
-  (e.g. if the user goes offline and moves to a new network, discard pending beacons).
+* Beacons must not leak information that a page should not know when it is in bfcache,
+  e.g. if network changes after a page goes into bfcache, the beacon should not be sent; if the page then goes out of bfcache, the beacon can be sent.
 * Delete pending beacons for a site if a user clears site data.
 * Beacons registered in an incognito session do not persist to disk.
 * Follow third-party cookie rules for beacons.
