@@ -304,16 +304,26 @@ special support may be needed to allow extension authors to block the sending (o
 
 Specifically, beacons will have the following privacy requirements:
 
-* Beacons must be sent over HTTPS.
-* Beacons are only sent over the same network that was active when the beacon was registered
-  (e.g. if the user goes offline and moves to a new network, discard pending beacons).
-* Delete pending beacons for a site if a user clears site data.
-* Beacons registered in an incognito session do not persist to disk.
 * Follow third-party cookie rules for beacons.
 * Post-unload beacons are not sent if background sync is disabled for a site.
-* If a page is suspended (for instance, as part of a [bfcache](https://web.dev/bfcache/)),
-  beacons should be sent within 10 minutes or less of suspension,
+* [#30] Beacons must not leak navigation history to the network provider that it should not know.
+  * If network changes after a page is navigated away, i.e. put into bfcache, the beacon should not be sent through the new network;
+    If the page is then restored from bfcache, the beacon can be sent.
+  * If this is difficult to achieve, consider just force sending out all beacons on navigating away.
+* [#27]\[TBD\] Beacons must be sent over HTTPS.
+* [#34]\[TBD\] Crash Recovery related (if implemented):
+  * Delete pending beacons for a site if a user clears site data.
+  * Beacons registered in an incognito session do not persist to disk.
+* [#3] If a page is suspended (for instance, as part of a [bfcache]),
+  beacons should be sent within 30 minutes or less of suspension,
   to keep the beacon send temporally close to the user's page visit.
+  Note that beacons lifetime is also capped by the browser's bfcache implementation.
+
+[#3]: https://github.com/WICG/unload-beacon/issues/3
+[#27]: https://github.com/WICG/unload-beacon/issues/27
+[#30]: https://github.com/WICG/unload-beacon/issues/30
+[#34]: https://github.com/WICG/unload-beacon/issues/34
+[bfcache]: https://web.dev/bfcache/
 
 ## Alternatives Considered
 
