@@ -85,8 +85,9 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 17. How does your feature handle non-"fully active" documents?
 
      > The API provides some mechanism for users to specify when to send the queued requests after the document becomes non-"fully active".
-     > The data of the queued requests should only come from the API calls when the document is still active.
+     > The data of the queued requests should only come from the API calls when the document is still active. If the document transits from non-"fully active" to fully active again, the API can continue to accumulate more data from the API calls in the document.
      > If the network provider changes after the document becomes non-"fully active", the user agent should not expose the queued requests to the new network provider.
+     > The user agent sends out all queued requests if a non-"fully active" document gets unloaded (discard).
 
 18. What should this questionnaire have asked?
 
