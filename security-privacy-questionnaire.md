@@ -4,14 +4,19 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 
 1. What information does this feature expose, and for what purposes?
      > The API intends to provide a reliable way for a document to send data to the target URL on document discard, or sometimes later after the document entering bfcache (becoming non-"fully active"), by making the user agent process the "send" requests queued by calling the API.
+     >
      > The user agent should not expose the queued requests to new network providers after users navigating away from the document where the requests were queued.
-     > Note that the API only sends requests in CORS mode with Same-Origin credentials mode.
+     >
+     > Users can disallow the "sending on document discard" behavior by disabling BackgroundSync for an origin.
+     >
+     > The API only sends requests in CORS mode with Same-Origin credentials mode.
 
    1. What information does your spec expose to the first party that the first party cannot currently easily determine.
       > No extra information exposed.
 
    2. What information does your spec expose to third parties that third parties cannot currently easily determine.
       > No extra information exposed.
+      >
       > Note that the API only sends requests in CORS mode with Same-Origin credentials mode.
 
    3. What potentially identifying information does your spec expose to the first party that the first party can already access (i.e., what identifying information does your spec duplicate or mirror).
@@ -34,8 +39,11 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 
 5. Do the features in your specification introduce new state for an origin that persists across browsing sessions?
 
-     > Not across browsing sessions. But the API provides a way to queue HTTP requests on a document which will be send by the user agent sometimes later, but before the document is discarded/browsing session ends.
-     > Users can disallow the "sending on document discard" behavior by disabling BackgroundSync for an origin.
+     > 1. Queued requests does NOT persist across browsing sessions if ["Crash Recovery"][crash-recovery] is not supported.
+     > 2. Queued requests persist across browsing session if ["Crash Recovery"][crash-recovery] is supported.
+     > We are still unsure how to address privacy concern for this, so it's not specified yet.
+     >
+     > Note: The API provides a way to queue HTTP requests on a document which will be send by the user agent sometimes later, but before the document is discarded/browsing session ends if without "Crash Recovery".
 
 6. Do the features in your specification expose information about the underlying platform to origins?
 
@@ -72,7 +80,8 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 
 14. How do the features in this specification work in the context of a browser’s Private Browsing or Incognito mode?
 
-     > No difference.
+     > The queued requests only persist in memory, i.e. whether ["Crash Recovery"][crash-recovery] is supported or not is not relevant.
+     > If in a browsing mode, the document is made impossible for history navigation, i.e. it gets discarded instead of becoming non-"fully active", all queued requests will be sent right on document discard.
 
 15. Does this specification have both "Security Considerations" and "Privacy Considerations" sections?
 
@@ -85,8 +94,11 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 17. How does your feature handle non-"fully active" documents?
 
      > The API provides some mechanism for users to specify when to send the queued requests after the document becomes non-"fully active".
+     >
      > The data of the queued requests should only come from the API calls when the document is still active. If the document transits from non-"fully active" to fully active again, the API can continue to accumulate more data from the API calls in the document.
+     >
      > If the network provider changes after the document becomes non-"fully active", the user agent should not expose the queued requests to the new network provider.
+     >
      > The user agent sends out all queued requests if a non-"fully active" document gets unloaded (discard).
 
 18. What should this questionnaire have asked?
@@ -95,3 +107,4 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
 
 [self-review]: https://w3ctag.github.io/security-questionnaire/
 [explainer]: https://github.com/WICG/unload-beacon/blob/main/README.md
+[crash-recovery]: https://github.com/WICG/unload-beacon/issues/34
