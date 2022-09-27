@@ -104,13 +104,13 @@ The `PendingBeacon` class define the following properties:
   The timeout will be reset if the page enters `visible` state again before the timeout expires.
   Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
   because the browser has freedom to bundle/batch multiple beacons,
-  and the browser might send out earlier than specified value (see [Privacy](#privacy)).
+  and the browser might send out earlier than specified value (see [Privacy Considerations](#privacy-considerations)).
   Defaults to `-1`.
 * `timeout`: A mutable `Number` property representing a timeout in milliseconds where the timer starts immediately after its value is set or updated.
   If the value `< 0`, the timer won't start.
   Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
   the browser has freedom to bundle/batch multiple beacons,
-  and the browser might send out earlier than specified value (see [Privacy](#privacy)).
+  and the browser might send out earlier than specified value (see [Privacy Considerations](#privacy-considerations)).
   Defaults to `-1`.
 * `pending`: An immutable `Boolean` property that returns `true` if the beacon has **not** yet started the sending process and has **not** yet been deactivated.
   Returns `false` if it is being sent, fails to send, or deactivated.
@@ -238,7 +238,7 @@ This section is here merely to note that there are several considerations browse
 * Bundling/batching of beacons. Beacons do not need to be sent instantly on page discard,
   and particularly for mobile devices, batching may improve radio efficiency.
 * Robustness against crashes/forced terminations/network outages.
-* User privacy. See the [Privacy](#privacy) section.
+* User privacy. See the [Privacy Considerations](#privacy-considerations) section.
 
 ### Sync vs Async implementation
 
@@ -294,7 +294,7 @@ and the latest data is set on the beacon
 
 This is makes it very hard to use the async API correctly.
 
-## Privacy
+## Privacy Considerations
 
 This design has limited privacy ramifications above the existing beaconing methods -
 it extends the existing beacon API and makes it more reliable.
@@ -324,6 +324,12 @@ Specifically, beacons will have the following privacy requirements:
 [#30]: https://github.com/WICG/unload-beacon/issues/30
 [#34]: https://github.com/WICG/unload-beacon/issues/34
 [bfcache]: https://web.dev/bfcache/
+
+## Security Considerations
+
+* What is the maximum size for post beacon data.
+* [#27]\[TBD\] Beacons must be sent over HTTPS.
+* This is browser-specific implementation detail but the browser process should be careful of the data from `setData(data)` call.
 
 ## Alternatives Considered
 
