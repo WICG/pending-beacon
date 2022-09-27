@@ -6,9 +6,11 @@ name: Spec Prod CI
 #
 
 on:
-  pull_request: {}
+  pull_request:
+    paths: ["**.bs"]
   push:
     branches: [main]
+    paths: ["**.bs"]
 jobs:
   main:
     name: Build, Validate and Deploy
