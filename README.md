@@ -315,9 +315,13 @@ Specifically, beacons will have the following privacy requirements:
   * Delete pending beacons for a site if a user clears site data.
   * Beacons registered in an incognito session do not persist to disk.
 * [#3] If a page is suspended (for instance, as part of a [bfcache]),
-  beacons should be sent within 30 minutes or less of suspension,
+  beacons should be sent within 10 minutes or less of suspension,
   to keep the beacon send temporally close to the user's page visit.
-  Note that beacons lifetime is also capped by the browser's bfcache implementation.
+  Network requests can reaveal information about users, like coarse
+  IP location as networks change. Users can reasonably expect that
+  this information isn't sent to sites after leaving a page, hence
+  a low limit. Note that beacons lifetime is also capped by the
+  browser's bfcache implementation.
 
 [#3]: https://github.com/WICG/unload-beacon/issues/3
 [#27]: https://github.com/WICG/unload-beacon/issues/27
