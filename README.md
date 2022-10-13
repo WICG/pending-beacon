@@ -1,13 +1,14 @@
 # Stateful JavaScript Page Unload Beacon API
 
-Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
-
 [![Super-Linter](https://github.com/WICG/unload-beacon/actions/workflows/linter.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/linter.yml)
 [![Spec Prod](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml)
 
+Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
 This document is an explainer for a system for sending beacons when pages are discarded,
 that uses a stateful API rather than having developers explicitly send beacons themselves.
+
+See also the proposed [spec](https://wicg.github.io/unload-beacon/).
 
 ## Problem And Motivation
 
