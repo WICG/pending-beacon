@@ -1,14 +1,14 @@
 <pre class="metadata">
-Title: Page Unload Beacon
+Title: Pending Beacon
 Status: UD
-ED: http://wicg.github.io/unload-beacon/
-Shortname: unload-beacon
+ED: http://wicg.github.io/pending-beacon/
+Shortname: pending-beacon
 Level: 1
 Editor: Ian Clelland, Google
 Abstract: This document introduces an API for registering data to be sent to a predetermined server
     at the point that a page is unloaded.
 Group: WebPerf
-Repository: WICG/unload-beacon
+Repository: WICG/pending-beacon
 </pre>
 
 Introduction {#introduction}

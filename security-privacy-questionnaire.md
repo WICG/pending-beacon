@@ -1,6 +1,6 @@
 # [Self-Review Questionnaire: Security and Privacy][self-review]
 
-This questionnaire covers the Page Unload Beacon API [explainer], based on the [W3C TAG Self-Review Questionnaire: Security and Privacy][self-review].
+This questionnaire covers the Pending Beacon API [explainer], based on the [W3C TAG Self-Review Questionnaire: Security and Privacy][self-review].
 
 1. What information does this feature expose, and for what purposes?
      > The API intends to provide a reliable way for a document to send data to the target URL on document discard, or sometimes later after the document entering bfcache (becoming non-"fully active"), by making the user agent process the "send" requests queued by calling the API.
@@ -106,5 +106,5 @@ This questionnaire covers the Page Unload Beacon API [explainer], based on the [
      > How long can a request be queued on a document by this feature?
 
 [self-review]: https://w3ctag.github.io/security-questionnaire/
-[explainer]: https://github.com/WICG/unload-beacon/blob/main/README.md
-[crash-recovery]: https://github.com/WICG/unload-beacon/issues/34
+[explainer]: https://github.com/WICG/pending-beacon/blob/main/README.md
+[crash-recovery]: https://github.com/WICG/pending-beacon/issues/34
