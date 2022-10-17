@@ -262,7 +262,7 @@ interface PendingBeacon {
 interface PendingGetBeacon : PendingBeacon {
     constructor(USVString url, optional PendingBeaconOptions options = {});
 
-    undefined setUrl(USVString url);
+    undefined setURL(USVString url);
 };
 
 [Exposed=(Window, Worker)]
@@ -371,7 +371,7 @@ A {{PendingBeacon}} object has an associated <dfn for=PendingBeacon>beacon</dfn>
 </div>
 
 <div algorithm>
-  The <dfn method for="PendingGetBeacon"><code>setUrl(|url|)</code></dfn> steps are:
+  The <dfn method for="PendingGetBeacon"><code>setURL(|url|)</code></dfn> steps are:
   1. Let |beacon| be [=this=]'s [=PendingBeacon/beacon=].
   1. If |beacon|'s [=pending beacon/is_pending=] is not true, throw a {{"NoModificationAllowedError"}} {{DOMException}}.
   1. If |url| is not a [=valid URL string=], throw a {{TypeError}}.
