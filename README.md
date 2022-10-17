@@ -1,14 +1,14 @@
-# Stateful JavaScript Page Unload Beacon API
+# Pending Beacon API
 
-[![Super-Linter](https://github.com/WICG/unload-beacon/actions/workflows/linter.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/linter.yml)
-[![Spec Prod](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml/badge.svg)](https://github.com/WICG/unload-beacon/actions/workflows/auto-publish.yml)
+[![Super-Linter](https://github.com/WICG/pending-beacon/actions/workflows/linter.yml/badge.svg)](https://github.com/WICG/pending-beacon/actions/workflows/linter.yml)
+[![Spec Prod](https://github.com/WICG/pending-beacon/actions/workflows/auto-publish.yml/badge.svg)](https://github.com/WICG/pending-beacon/actions/workflows/auto-publish.yml)
 
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
 This document is an explainer for a system for sending beacons when pages are discarded,
-that uses a stateful API rather than having developers explicitly send beacons themselves.
+that uses a stateful JavaScript API rather than having developers explicitly send beacons themselves.
 
-See also the proposed [spec](https://wicg.github.io/unload-beacon/).
+See also the proposed [spec](https://wicg.github.io/pending-beacon/).
 
 ## Problem And Motivation
 
@@ -320,10 +320,10 @@ Specifically, beacons will have the following privacy requirements:
   to keep the beacon send temporally close to the user's page visit.
   Note that beacons lifetime is also capped by the browser's bfcache implementation.
 
-[#3]: https://github.com/WICG/unload-beacon/issues/3
-[#27]: https://github.com/WICG/unload-beacon/issues/27
-[#30]: https://github.com/WICG/unload-beacon/issues/30
-[#34]: https://github.com/WICG/unload-beacon/issues/34
+[#3]: https://github.com/WICG/pending-beacon/issues/3
+[#27]: https://github.com/WICG/pending-beacon/issues/27
+[#30]: https://github.com/WICG/pending-beacon/issues/30
+[#34]: https://github.com/WICG/pending-beacon/issues/34
 [bfcache]: https://web.dev/bfcache/
 
 ## Security Considerations
