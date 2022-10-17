@@ -92,11 +92,13 @@ From the point of view of the developer the exact beacon send time is unknown.
 However, it should not be constructed directly.
 Use [`PendingGetBeacon`](#pendinggetbeacon) or [`PendingPostBeacon`](#pendingpostbeacon) instead.
 
+The entire `PendingBeacon` API is only available in [Secure Contexts](https://w3c.github.io/webappsec-secure-contexts/).
+
 ##### Properties
 
 The `PendingBeacon` class define the following properties:
 
-* `url`: An immutable `String` property reflecting the target URL endpoint of the pending beacon.
+* `url`: An immutable `String` property reflecting the target URL endpoint of the pending beacon. The scheme must be **https:** if exists.
 * `method`: An immutable property defining the HTTP method used to send the beacon.
   Its value is a `string` matching either `'GET'` or `'POST'`.
 * `backgroundTimeout`: A mutable `Number` property specifying a timeout in milliseconds whether the timer starts after the page enters the next `hidden` visibility state.
@@ -145,7 +147,7 @@ even if the result goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
+It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting a url of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -163,7 +165,7 @@ The `PendingGetBeacon` class would support [the same properties](#properties) in
 
 The `PendingGetBeacon` class would support the following additional methods:
 
-* `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`.
+* `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`. Throw a `TypeError` if `url` has a non https: scheme.
 
 ---
 
@@ -184,7 +186,7 @@ After it is queued, even if the instance goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works the same as the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does.
+It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting a url of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -311,7 +313,7 @@ Specifically, beacons will have the following privacy requirements:
   * If network changes after a page is navigated away, i.e. put into bfcache, the beacon should not be sent through the new network;
     If the page is then restored from bfcache, the beacon can be sent.
   * If this is difficult to achieve, consider just force sending out all beacons on navigating away.
-* [#27]\[TBD\] Beacons must be sent over HTTPS.
+* [#27] Beacons must be sent over HTTPS.
 * [#34]\[TBD\] Crash Recovery related (if implemented):
   * Delete pending beacons for a site if a user clears site data.
   * Beacons registered in an incognito session do not persist to disk.
