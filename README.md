@@ -71,13 +71,15 @@ If perfectly cancellable beacons are not needed, then the [alternative write-onl
 
 ## Design
 
-The basic idea is to extend the existing JavaScript beacon API by adding a stateful version.
+The basic idea is to extend the existing JavaScript [beacon API][sendBeacon-api] by adding a stateful version:
+
 Rather than a developer calling `navigator.sendBeacon`,
 the developer registers that they would like to send a beacon for this page when it gets discarded,
 and the browser returns a handle to an object that represents a beacon that the browser promises to send on page discard (whenever that is).
 The developer can then call methods on this registered beacon handle to populate it with data.
+
 Then, at some point later after the user leaves the page, the browser will send the beacon.
-From the point of view of the developer the exact beacon send time is unknown.
+From the point of view of the developer the exact beacon send time is unknown. On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated.
 
 ### JavaScript API
 
