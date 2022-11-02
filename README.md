@@ -149,7 +149,7 @@ even if the result goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting a url of other scheme.
+It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -167,7 +167,7 @@ The `PendingGetBeacon` class would support [the same properties](#properties) in
 
 The `PendingGetBeacon` class would support the following additional methods:
 
-* `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`. Throw a `TypeError` if `url` has a non https: scheme.
+* `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`. Throw a `TypeError` if `url` is null, undefined, or has a non https: scheme.
 
 ---
 
@@ -188,7 +188,7 @@ After it is queued, even if the instance goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting a url of other scheme.
+It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
