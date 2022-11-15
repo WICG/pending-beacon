@@ -307,14 +307,21 @@ However, it may break existing means that users have of blocking beaconing -
 since the browser itself sends beacons **behind the scenes** (so to speak),
 special support may be needed to allow extension authors to block the sending (or registering) of beacons.
 
-Specifically, beacons will have the following privacy requirements:
+Specifically, pending beacons will have the following privacy requirements:
 
 * Follow third-party cookie rules for beacons.
-* Post-unload beacons are not sent if background sync is disabled for a site.
-* [#30] Beacons must not leak navigation history to the network provider that it should not know.
-  * If network changes after a page is navigated away, i.e. put into bfcache, the beacon should not be sent through the new network;
-    If the page is then restored from bfcache, the beacon can be sent.
-  * If this is difficult to achieve, consider just force sending out all beacons on navigating away.
+* The timing when the beacons can be sent must be taken care of:
+  * Before navigating away (or document being fully unloaded), beacons are **sendable**.
+  * [On navigating away][navigating-away], if beacons is already **non-sendable**, consider sending all of them out here.
+  * [After navigating away][navigating-away] (or document discarded or bfcached):
+    * If [BackgroundSync] is on
+      * beacons are **sendable** over the same network as the one before navigating away.
+    * If [BackgroundSync] is off:
+      * Beacons are **sendable** if there is another open document (tab/frame/etc) with [the same storage partitioning key][StorageKey] as the current document's one.
+      * [#30] Beacons are **sendable** over the same network as the one before navigating away.
+      * Beacons are **non-sendable** if none of the above conditions is met. **non-sendable** beacons might be delayed until navigating back, or might be forced sending earlier on navigating away.
+      * Beacons can change from **sendable** to **non-sendable**. In this case, beacons can only be delayed or be silently dropped.
+    * If this is difficult to achieve, consider just force sending out all beacons on navigating away.
 * [#27] Beacons must be sent over HTTPS.
 * [#34]\[TBD\] Crash Recovery related (if implemented):
   * Delete pending beacons for a site if a user clears site data.
@@ -329,6 +336,9 @@ Specifically, beacons will have the following privacy requirements:
 [#30]: https://github.com/WICG/pending-beacon/issues/30
 [#34]: https://github.com/WICG/pending-beacon/issues/34
 [bfcache]: https://web.dev/bfcache/
+[BackgroundSync]: https://github.com/WICG/pending-beacon/issues/3#issuecomment-1284164794
+[StorageKey]: https://github.com/WICG/pending-beacon/issues/3#issuecomment-1286031505
+[navigating-away]: https://github.com/WICG/pending-beacon/issues/3#issuecomment-1286397825
 
 ## Security Considerations
 
