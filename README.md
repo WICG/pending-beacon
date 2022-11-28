@@ -312,7 +312,8 @@ Specifically, pending beacons will have the following privacy requirements:
 * Follow third-party cookie rules for beacons.
 * The timing when the beacons can be sent must be taken care of:
   * Before navigating away (or document being fully unloaded), beacons are **sendable**.
-  * [On navigating away][navigating-away], if beacons is already **non-sendable**, consider sending all of them out here.
+  * [On navigating away][navigating-away], all beacons are **sendable** no matter what other states the browser has, (e.g. BackgroundSync is on or off).
+    * If beacons don't meet the **sendable** requirement after navigating away (see below), consider sending all of them out earlier at this moment if handling them later is difficult, such that they won't be dropped silently.
   * [After navigating away][navigating-away] (or document discarded or bfcached):
     * If [BackgroundSync] is on
       * beacons are **sendable** over the same network as the one before navigating away.
