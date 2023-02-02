@@ -360,6 +360,47 @@ and it would not be possible to restrict what that callback does
 It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons,
 and complicates the already sufficiently complicated page lifecycle.
 
+### Extending Fetch API
+
+Another alternative is to extend the [Fetch API] to support the [requirements](#requirements), of which the following three are critical:
+
+1. A reliable mechanism for delaying operation until page discard, including unloading, an optional timeout after bfcached, bfcache eviction or browser crashes.
+2. Doing a keepalive fetch request when that mechanism triggers.
+3. Allow pending requests to be updated to reduce network usage.
+
+The existing Fetch with `keepalive` option, combined with `visibilitychagne` listener, can approximate part of (1):
+
+```js
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    fetch('/send_beacon', {keepalive: true});
+    // response may be dropped.
+  }
+});
+```
+
+or a new option `deferSend` may be introduced to cover the entire (1):
+
+```js
+// defer request sending on `hidden` or bfcahce eviction etc.
+fetch('/send_beacon', {deferSend: true});
+// Promise may not resolve and response may be dropped.
+```
+
+However, there are several problem with this approach:
+
+1. **The Fetch API shape is not designed for this (1) purpose.** Fundamentally, `window.fetch` returns a Promise with Response to resolve, which don't make sense for beaconing at page discard that doesn't expect to process response.
+2. **The (1) mechanism is too unrelated to be added to the Fetch API**. Even just with a new option, bundling it with a visibility event-specific behavior just seems wrong in terms of the API's scope.
+3. **The Fetch API does not support updating request URL or data.** This is simply not possible with its API shape. Users have to re-fetch if any update happens.
+
+The above problems suggest that a new API is neccessary for our purpose.
+
+See also discussions in [#52] and [#50].
+
+[#50]: https://github.com/WICG/pending-beacon/issues/50
+[#52]: https://github.com/WICG/pending-beacon/issues/52
+[Fetch API]: https://fetch.spec.whatwg.org/#fetch-api
+
 ### Write-only API
 
 This is similar to the proposed API but there is no `pending` and no `setData()`.
