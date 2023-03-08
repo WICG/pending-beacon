@@ -158,7 +158,7 @@ even if the result goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
+It works similar to the existing [`navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -197,7 +197,7 @@ After it is queued, even if the instance goes out of scope,
 the beacon will still be sent (unless `deactivate()`-ed beforehand).
 
 The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`Navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
+It works similar to the existing [`navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
 
 The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
 
@@ -479,7 +479,7 @@ The use case is for logging a total-so-far.
 The server would typically only pay attention to the latest value.
 
 [`XMLHttpRequest`]: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
-[`navigator.sendBeacon`]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+[sendbeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
 [`fetch`]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
 [sendBeacon-w3]: https://www.w3.org/TR/beacon/#sec-sendBeacon-method
 [ArrayBuffer-api]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
