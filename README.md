@@ -8,7 +8,7 @@ Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://gith
 This document is an explainer for a system for sending beacons when pages are discarded,
 that uses a stateful JavaScript API rather than having developers explicitly send beacons themselves.
 
-See also the proposed [spec](https://wicg.github.io/pending-beacon/).
+See also the proposed [spec](https://wicg.github.io/pending-beacon/) (currently outdated).
 
 ## Problem And Motivation
 
@@ -19,10 +19,10 @@ There are currently
 [four major methods](https://calendar.perfplanet.com/2020/beaconing-in-practice/) of beaconing used around the web:
 
 * Adding `<img>` tags inside dismissal events.
-* Sending a sync [`XMLHttpRequest`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest).
+* Sending a sync [`XMLHttpRequest`].
     Note: doesn’t work as part of dismissal events.
-* Using the [`Navigator.sendBeacon`][sendBeacon-api] API.
-* Using the [`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/fetch) API with the `keepalive` flag.
+* Using the [`navigator.sendBeacon`] API.
+* Using the [`fetch`] API with the `keepalive: true` flag.
 
 (There may be other methods; these are the main ones.)
 
@@ -49,6 +49,15 @@ which allows website authors to specify one or more beacons (HTTP requests)
 that should be sent reliably when the page is being unloaded.
 
 ## Requirements
+
+The following 3 requirements are critical:
+
+1. Support a reliable mechanism for delaying operation until page discard, including unloading.
+   1. An optional timeout after visibility: hidden, bfcached, bfcache eviction or browser crashes.
+2. Behave like a keepalive fetch request when 1's mechanism triggers.
+3. Allow pending requests to be updated to reduce network usage.
+
+### Details
 
 * The beacon should be sent at or close to page discard time.
   * For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction),
@@ -324,12 +333,6 @@ Specifically, beacons will have the following privacy requirements:
   to keep the beacon send temporally close to the user's page visit.
   Note that beacons lifetime is also capped by the browser's bfcache implementation.
 
-[#3]: https://github.com/WICG/pending-beacon/issues/3
-[#27]: https://github.com/WICG/pending-beacon/issues/27
-[#30]: https://github.com/WICG/pending-beacon/issues/30
-[#34]: https://github.com/WICG/pending-beacon/issues/34
-[bfcache]: https://web.dev/bfcache/
-
 ## Security Considerations
 
 * What is the maximum size for post beacon data.
@@ -360,13 +363,11 @@ and it would not be possible to restrict what that callback does
 It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons,
 and complicates the already sufficiently complicated page lifecycle.
 
-### Extending Fetch API
+### Extending `fetch` API
 
-Another alternative is to extend the [Fetch API] to support the [requirements](#requirements), of which the following three are critical:
+> **NOTE:** Discussions in [#52] and [#50].
 
-1. A reliable mechanism for delaying operation until page discard, including unloading, an optional timeout after bfcached, bfcache eviction or browser crashes.
-2. Doing a keepalive fetch request when that mechanism triggers.
-3. Allow pending requests to be updated to reduce network usage.
+Another alternative is to extend the [Fetch API] to support the [requirements](#requirements).
 
 The existing Fetch with `keepalive` option, combined with `visibilitychagne` listener, can approximate part of (1):
 
@@ -395,11 +396,54 @@ However, there are several problem with this approach:
 
 The above problems suggest that a new API is neccessary for our purpose.
 
-See also discussions in [#52] and [#50].
+### Extending `sendBeacon` API
 
-[#50]: https://github.com/WICG/pending-beacon/issues/50
-[#52]: https://github.com/WICG/pending-beacon/issues/52
-[Fetch API]: https://fetch.spec.whatwg.org/#fetch-api
+> **NOTE:** Discussions in [WebKit's standard position](https://github.com/WebKit/standards-positions/issues/85#issuecomment-1418381239).
+
+Another alternative is to extend the [`navigator.sendBeacon`] API:
+
+```ts
+navigator.sendBeacon(url): bool
+navigator.sendBeacon(url, data): bool
+```
+
+To support the [requirements](#requirements) and to make the new API backward compatible, we propose the following shape:
+
+### New API
+
+```ts
+navigator.sendBeacon(url, fetchOptions): PendingBeacon
+```
+
+An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the above [PendingBeacon](#pendingbeacon) section. Some details to note:
+
+1.  The proposal would like to support both `POST` and `GET` requests. As the existing API only support `POST` beacons, passing in `fetchOptions` with `method: GET` should enable queuing `GET` beacons.
+2..  `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
+    1.  `method`: one of `GET` or `POST`.
+    2.  `headers`: supports custom headers, which unblocks [#50].
+    3.  `body`: `TypedArray`, `DataView` are not supported in the old API.
+    4.  `credentials`: enforcing `same-origin` to be consistent.
+    5.  `cache`: not supported.
+    6.  `redirect`: enforcing `follow`.
+    7.  `referrer`: enforcing same-origin URL.
+    8.  `referrerPolicy`: enforcing `same-origin`.
+    9.  `keepalive`: enforcing `true`.
+    10. `integrity`: not supported.
+    11. `signal`: not supported. See below
+    12. `priority`: enforcing `auto`.
+
+The reason why `signal` and `AbortController` is not desired is that the proposal would like to supports more than just aborting the requests, it also needs to check pending states and accumulate data. Supporting these requirements via the returned `PendingBeacon` object allows more flexibility.
+
+The above API itself is enough for the requirements (2) and (3), but not for (1), which requires delaying the request. As the `sendBeacon` semantic doesn't make sense for the "delaying" behavior, proposing a new function is better:
+
+```ts
+navigator.queueBeacon(url, fetchOptions, beaconOptions): PendingBeacon
+```
+
+The extra `beaconOptions` is a dictionary taking `backgroundTimeout` and `timeout` to support the optional timeout after bfcache or hidden requirement.
+
+At the end, this proposal also requires an entirely new API, just under the existing `navigator` namespace. The advantage is that we might be able to merge this proposal into [w3c/beacon] and eliminate the burden to maintain a new spec.
+
 
 ### Write-only API
 
@@ -436,10 +480,22 @@ If a payload has been sent already, replaceData simply stores a new payload to b
 The use case is for logging a total-so-far.
 The server would typically only pay attention to the latest value.
 
-[sendBeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+[`XMLHttpRequest`]: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
+[`navigator.sendBeacon`]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+[`fetch`]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
 [sendBeacon-w3]: https://www.w3.org/TR/beacon/#sec-sendBeacon-method
 [ArrayBuffer-api]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
 [ArrayBufferView-api]: https://developer.mozilla.org/en-US/docs/Web/API/ArrayBufferView
 [Blob-api]: https://developer.mozilla.org/en-US/docs/Web/API/Blob
 [FormData-api]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [URLSearchParams-api]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
+[#3]: https://github.com/WICG/pending-beacon/issues/3
+[#27]: https://github.com/WICG/pending-beacon/issues/27
+[#30]: https://github.com/WICG/pending-beacon/issues/30
+[#34]: https://github.com/WICG/pending-beacon/issues/34
+[bfcache]: https://web.dev/bfcache/
+[#50]: https://github.com/WICG/pending-beacon/issues/50
+[#52]: https://github.com/WICG/pending-beacon/issues/52
+[Fetch API]: https://fetch.spec.whatwg.org/#fetch-api
+[`RequestInit`]: https://fetch.spec.whatwg.org/#requestinit
+[w3c/beacon]: https://github.com/w3c/beacon
