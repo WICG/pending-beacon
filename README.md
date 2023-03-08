@@ -409,8 +409,6 @@ navigator.sendBeacon(url, data): bool
 
 To support the [requirements](#requirements) and to make the new API backward compatible, we propose the following shape:
 
-### New API
-
 ```ts
 navigator.sendBeacon(url, fetchOptions): PendingBeacon
 ```
@@ -418,7 +416,7 @@ navigator.sendBeacon(url, fetchOptions): PendingBeacon
 An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the above [PendingBeacon](#pendingbeacon) section. Some details to note:
 
 1.  The proposal would like to support both `POST` and `GET` requests. As the existing API only support `POST` beacons, passing in `fetchOptions` with `method: GET` should enable queuing `GET` beacons.
-2..  `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
+2.  `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
     1.  `method`: one of `GET` or `POST`.
     2.  `headers`: supports custom headers, which unblocks [#50].
     3.  `body`: `TypedArray`, `DataView` are not supported in the old API.
