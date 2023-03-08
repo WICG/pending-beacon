@@ -415,20 +415,20 @@ navigator.sendBeacon(url, fetchOptions): PendingBeacon
 
 An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the above [PendingBeacon](#pendingbeacon) section. Some details to note:
 
-1.  The proposal would like to support both `POST` and `GET` requests. As the existing API only support `POST` beacons, passing in `fetchOptions` with `method: GET` should enable queuing `GET` beacons.
-2.  `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
-    1.  `method`: one of `GET` or `POST`.
-    2.  `headers`: supports custom headers, which unblocks [#50].
-    3.  `body`: `TypedArray`, `DataView` are not supported in the old API.
-    4.  `credentials`: enforcing `same-origin` to be consistent.
-    5.  `cache`: not supported.
-    6.  `redirect`: enforcing `follow`.
-    7.  `referrer`: enforcing same-origin URL.
-    8.  `referrerPolicy`: enforcing `same-origin`.
-    9.  `keepalive`: enforcing `true`.
-    10. `integrity`: not supported.
-    11. `signal`: not supported. See below
-    12. `priority`: enforcing `auto`.
+1. The proposal would like to support both `POST` and `GET` requests. As the existing API only support `POST` beacons, passing in `fetchOptions` with `method: GET` should enable queuing `GET` beacons.
+2. `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
+   1. `method`: one of `GET` or `POST`.
+   2. `headers`: supports custom headers, which unblocks [#50].
+   3. `body`: `TypedArray`, `DataView` are not supported in the old API.
+   4. `credentials`: enforcing `same-origin` to be consistent.
+   5. `cache`: not supported.
+   6. `redirect`: enforcing `follow`.
+   7. `referrer`: enforcing same-origin URL.
+   8. `referrerPolicy`: enforcing `same-origin`.
+   9. `keepalive`: enforcing `true`.
+   10. `integrity`: not supported.
+   11. `signal`: not supported. See below
+   12. `priority`: enforcing `auto`.
 
 The reason why `signal` and `AbortController` is not desired is that the proposal would like to supports more than just aborting the requests, it also needs to check pending states and accumulate data. Supporting these requirements via the returned `PendingBeacon` object allows more flexibility.
 
