@@ -363,7 +363,7 @@ and it would not be possible to restrict what that callback does
 It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons,
 and complicates the already sufficiently complicated page lifecycle.
 
-### Extending `fetch` API
+### Extending `fetch()` API
 
 > **NOTE:** Discussions in [#52] and [#50].
 
@@ -388,6 +388,8 @@ fetch('/send_beacon', {deferSend: true});
 // Promise may not resolve and response may be dropped.
 ```
 
+#### Problem
+
 However, there are several problem with this approach:
 
 1. **The Fetch API shape is not designed for this (1) purpose.** Fundamentally, `window.fetch` returns a Promise with Response to resolve, which don't make sense for beaconing at page discard that doesn't expect to process response.
@@ -396,7 +398,7 @@ However, there are several problem with this approach:
 
 The above problems suggest that a new API is neccessary for our purpose.
 
-### Extending `sendBeacon` API
+### Extending `navigator.sendBeacon()` API
 
 > **NOTE:** Discussions in [WebKit's standard position](https://github.com/WebKit/standards-positions/issues/85#issuecomment-1418381239).
 
@@ -407,10 +409,10 @@ navigator.sendBeacon(url): bool
 navigator.sendBeacon(url, data): bool
 ```
 
-To support the [requirements](#requirements) and to make the new API backward compatible, we propose the following shape:
+To meet the [requirements](#requirements) and to make the new API backward compatible, we propose the following shape:
 
 ```ts
-navigator.sendBeacon(url, fetchOptions): PendingBeacon
+navigator.sendBeacon(url, data, fetchOptions): PendingBeacon
 ```
 
 An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the above [PendingBeacon](#pendingbeacon) section. Some details to note:
@@ -419,7 +421,7 @@ An optional dictionary argument `fetchOptions` can be passed in, which changes t
 2. `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
    1. `method`: one of `GET` or `POST`.
    2. `headers`: supports custom headers, which unblocks [#50].
-   3. `body`: `TypedArray`, `DataView` are not supported in the old API.
+   3. `body`: **not supported**. POST body should be in `data` argument.
    4. `credentials`: enforcing `same-origin` to be consistent.
    5. `cache`: not supported.
    6. `redirect`: enforcing `follow`.
@@ -427,16 +429,27 @@ An optional dictionary argument `fetchOptions` can be passed in, which changes t
    8. `referrerPolicy`: enforcing `same-origin`.
    9. `keepalive`: enforcing `true`.
    10. `integrity`: not supported.
-   11. `signal`: not supported. See below
+   11. `signal`: **not supported**.
+       * The reason why `signal` and `AbortController` are not desired is that we needs more than just aborting the requests. It is essential to check a beacon's pending states and to update or accumulate data. Supporting these requirements via the returned `PendingBeacon` object allows more flexibility.
    12. `priority`: enforcing `auto`.
+3. `data`: For `GET` beacon, it must be `null` or `undefined`.
+4. The return value must supports updating request URL or data, hence `PendingBeacon` object.
 
-The reason why `signal` and `AbortController` is not desired is that the proposal would like to supports more than just aborting the requests, it also needs to check pending states and accumulate data. Supporting these requirements via the returned `PendingBeacon` object allows more flexibility.
+#### Problem
 
-The above API itself is enough for the requirements (2) and (3), but not for (1), which requires delaying the request. As the `sendBeacon` semantic doesn't make sense for the "delaying" behavior, proposing a new function is better:
+* The above API itself is enough for the requirements (2) and (3), but cannot achieve the requirement (1), delaying the request.
+* The function name `sendBeacon` semantic doesn't make sense for the "delaying" behavior.
+* Combing the subset of `fetchOptions` along with the existing `data` parameter are error-proning.
+
+### Introducing `navigator.queueBeacon()` API
+
+To imprvoe from "Extending `navigator.sendBeacon()` API, it's better with a new function:
 
 ```ts
 navigator.queueBeacon(url, fetchOptions, beaconOptions): PendingBeacon
 ```
+
+This proposal gets rid of the `data` parameter, and request body should be put into `fetchOptions.body` directly.
 
 The extra `beaconOptions` is a dictionary taking `backgroundTimeout` and `timeout` to support the optional timeout after bfcache or hidden requirement.
 
