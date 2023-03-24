@@ -5,10 +5,7 @@
 
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
-This document is an explainer for a system for sending beacons when pages are discarded,
-that uses a stateful JavaScript API rather than having developers explicitly send beacons themselves.
-
-See also the proposed [spec](https://wicg.github.io/pending-beacon/) (currently outdated).
+This document is an explainer for a system for sending beacons when pages are discarded, rather than having developers explicitly send beacons themselves.
 
 ## Problem And Motivation
 
@@ -61,8 +58,7 @@ The following 3 requirements are critical:
 
 * The beacon should be sent at or close to page discard time.
   * For frozen pages that are never unfrozen, this should happen either when the frozen page is removed from memory (BFCache eviction),
-    or after a developer-specified timeout
-    (using [timeout-related properties](#properties) described below).
+    or after a developer-specified timeout.
   * For browser crashes, forced app closures, etc, the browser should make an effort to send the beacons the next time it is launched
     (guarantees around privacy and reliability here will be the same as the Reporting API’s crash reporting).
 * The beacon destination URL should be modifiable.
@@ -80,161 +76,156 @@ If perfectly cancellable beacons are not needed, then the [alternative write-onl
 
 ## Design
 
-The basic idea is to extend the existing JavaScript [beacon API][sendBeacon-api] by adding a stateful version:
+> **NOTE:** Discussions in [#70], [#52] and [#50].
 
-Rather than a developer calling `navigator.sendBeacon`,
-the developer registers that they would like to send a beacon for this page when it gets discarded,
-and the browser returns a handle to an object that represents a beacon that the browser promises to send on page discard (whenever that is).
-The developer can then call methods on this registered beacon handle to populate it with data.
+The basic idea is to extend the [Fetch API] by adding a new stateful option:
+Rather than a developer manually calling `fetch(url, {keepalive: true})` within a `visibilitychange` event listener, the developer registers that they would like to send a pending request, i.e. a beacon, for this page when it gets discarded.
+The developer can then call signal controller registered on this request to updates based on its state or abort.
 
-Then, at some point later after the user leaves the page, the browser will send the beacon.
-From the point of view of the developer the exact beacon send time is unknown. On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated.
+Then, at some point later after the user leaves the page, the browser will send the request.
+From the point of view of the developer the exact send time is unknown. On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated, as the page is already gone.
 
 ### JavaScript API
 
- In detail, the proposed design includes a new interface [`PendingBeacon`](#pendingbeacon),
- and two of its implementations [`PendingGetBeacon`](#pendinggetbeacon) and [`PendingPostBeacon`](#pendingpostbeacon):
+The following new fetch options are introduced into [`RequestInit`]:
 
----
+* `deferSend`: A `DeferSend` object. If set, the browser should defer the request sending until page discard or bfcache eviction.
+  Underlying implementation should ensure the request is kept alive until suceeds or fails.
+  Hence it cannot work with `keepalive: false`. The object may optionally set the following field:
+  * `sendAfterBeingBackgroundedTimeout`: Specifies a timeout in seconds for a timer that only starts after the page enters the next `hidden` visibility state.
+    Default to `-1`.
+* `sentSignal`: A `SentSignal` object to allow user to listen to the `sent` event of the request when it gets sent.
 
-#### `PendingBeacon`
 
-`PendingBeacon` defines the common properties & methods representing a beacon.
-However, it should not be constructed directly.
-Use [`PendingGetBeacon`](#pendinggetbeacon) or [`PendingPostBeacon`](#pendingpostbeacon) instead.
+### Examples
 
-The entire `PendingBeacon` API is only available in [Secure Contexts](https://w3c.github.io/webappsec-secure-contexts/).
-
-##### Properties
-
-The `PendingBeacon` class define the following properties:
-
-* `url`: An immutable `String` property reflecting the target URL endpoint of the pending beacon. The scheme must be **https:** if exists.
-* `method`: An immutable property defining the HTTP method used to send the beacon.
-  Its value is a `string` matching either `'GET'` or `'POST'`.
-* `backgroundTimeout`: A mutable `Number` property specifying a timeout in milliseconds whether the timer starts after the page enters the next `hidden` visibility state.
-  If setting the value `>= 0`, after the timeout expires, the beacon will be queued for sending by the browser, regardless of whether or not the page has been discarded yet.
-  If the value `< 0`, it is equivalent to no timeout and the beacon will only be sent by the browser on page discarded or on page evicted from BFCache.
-  The timeout will be reset if the page enters `visible` state again before the timeout expires.
-  Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
-  because the browser has freedom to bundle/batch multiple beacons,
-  and the browser might send out earlier than specified value (see [Privacy Considerations](#privacy-considerations)).
-  Defaults to `-1`.
-* `timeout`: A mutable `Number` property representing a timeout in milliseconds where the timer starts immediately after its value is set or updated.
-  If the value `< 0`, the timer won't start.
-  Note that the beacon is not guaranteed to be sent at exactly this many milliseconds after `hidden`,
-  the browser has freedom to bundle/batch multiple beacons,
-  and the browser might send out earlier than specified value (see [Privacy Considerations](#privacy-considerations)).
-  Defaults to `-1`.
-* `pending`: An immutable `Boolean` property that returns `true` if the beacon has **not** yet started the sending process and has **not** yet been deactivated.
-  Returns `false` if it is being sent, fails to send, or deactivated.
-
-Note that attempting to directly assign a value to the immutable properties will have no observable effect.
-
-##### Methods
-
-The `PendingBeacon` class define the following methods:
-
-* `deactivate()`: Deactivate (cancel) the pending beacon.
-  If the beacon is already not pending, this won't have any effect.
-* `sendNow()`: Send the current beacon data immediately.
-  If the beacon is already not pending, this won't have any effect.
-
----
-
-#### `PendingGetBeacon`
-
-The `PendingGetBeacon` class provides additional methods for manipulating a beacon's GET request data.
-
-##### Constructor
+#### Defer a `GET` request until page discard
 
 ```js
-beacon = new PendingGetBeacon(url, options = {});
+fetch('/send_beacon', {deferSend: new DeferSend()}).then(res => {
+  // Promise may never be resolved and response may be dropped.
+})
 ```
 
-An instance of `PendingGetBeacon` represents a `GET` beacon that will be sent by the browser at some point in the future.
-Calling this constructor queues the beacon for sending by the browser;
-even if the result goes out of scope,
-the beacon will still be sent (unless `deactivate()`-ed beforehand).
-
-The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
-
-The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
-
-* `'backgroundTimeout'`
-* `'timeout'`
-
-##### Properties
-
-The `PendingGetBeacon` class would support [the same properties](#properties) inheriting from
-`PendingBeacon`'s, except with the following differences:
-
-* `method`: Its value is set to `'GET'`.
-
-##### Methods
-
-The `PendingGetBeacon` class would support the following additional methods:
-
-* `setURL(url)`: Set the current beacon's `url` property. The `url` parameter takes a `String`. Throw a `TypeError` if `url` is null, undefined, or has a non https: scheme.
-
----
-
-#### `PendingPostBeacon`
-
-The `PendingPostBeacon` class provides additional methods for manipulating a beacon's POST request data.
-
-##### Constructor
+#### Defer a request until next `hidden` + 1 minute
 
 ```js
-beacon = new PendingPostBeacon(url, options = {});
+fetch('/send_beacon', {
+  deferSend: new DeferSend(sendAfterBeingBackgroundedTimeout: 60)
+  }).then(res => {
+  // Possibly resolved after next `hidden` + 1 minute.
+  // But this may still not be resolved if page is already in bfcache.
+})
 ```
 
-An instance of `PendingPostBeacon` represents a `POST` beacon.
-Simply calling this constructor will **not** queue the beacon for sending.
-Instead, a `POST` beacon will **only be queued** by the browser for sending at some point in the future if it has non-`undefined` and non-`null` data.
-After it is queued, even if the instance goes out of scope,
-the beacon will still be sent (unless `deactivate()`-ed beforehand).
+#### Update a pending request
 
-The `url` parameter is a string that specifies the value of the `url` property.
-It works similar to the existing [`navigator.sendBeacon`][sendBeacon-api]’s `url` parameter does, except that it only supports https: scheme. The constructor throws a `TypeError` if getting an undefined or a null URL, or a URL of other scheme.
+```js
+let abort = null;
+let pending = true;
 
-The `options` parameter would be a dictionary that optionally allows specifying the following properties for the beacon:
+function createBeacon(data) {
+  pending = true;
+  abort = new AbortController();
+  let sentSignal = new SentSignal();
+  fetch(data, {
+    deferSend: new DeferSend(),
+    signal: abortController.signal,
+    sentSignal: sentsentSignal
+  });
 
-* `'backgroundTimeout'`
-* `'timeout'`
+  sentSignal.addEventListener("sent", () => {
+    pending = false;
+  });
+}
 
-##### Properties
+function updateBeacon(data) {
+  if (pending) {
+    abort.abort();
+  }
+  createBeacon(data);
+}
+```
 
-The `PendingPostBeacon` class would support [the same properties](#properties) inheriting from
-`PendingBeacon`'s, except with the following differences:
+### Open Discussions
 
-* `method`: Its value is set to `'POST'`.
-* `timeout`: The timer only starts after its value is set or updated **and** `setData(data)` has ever been called with non-`null` and non-`undefined` data.
+#### 1. Limiting the scope of pending requests
 
-##### Methods
+> **NOTE:** Discussions in [#72].
 
-The `PendingPostBeacon` class would support the following additional methods:
+Even if moving toward a fetch-based design, this proposal does still not focus on supporting every type of requests as beacons.
 
-* `setData(data)`: Set the current beacon data.
-  The `data` parameter would take the same types as the [sendBeacon][sendBeacon-w3] method’s `data` parameter.
-  That is, one of [`ArrayBuffer`][ArrayBuffer-api],
-  [`ArrayBufferView`][ArrayBufferView-api], [`Blob`][Blob-api], `String`,
-  [`FormData`][FormData-api], or [`URLSearchParams`][URLSearchParams-api].
-  If `data` is not `undefined` and not `null`, the browser will queue the beacon for sending,
-  which means it kicks off the timer for `timeout` property (if set) and the timer for `backgroundTimeout` property (after the page enters `hidden` state).
+For example, it's non-goal to support most of [HTTP methods], i.e. being able to defer an `OPTION` or `TRACE`.
+We should look into [`RequestInit`] and decide whether `deferSend` should throw errors on some of their values:
 
----
+* `keepalive`: must be `true`. `{deferSend: new DeferSend(), keepalive: false}` conflicts with each other.
+* `url`: supported.
+* `method`: one of `GET` or `POST`.
+* `headers`: supported.
+* `body`: only supported for `POST`.
+* `signal`: supported.
+* `credentials`: enforcing `same-origin` to be consistent.
+* `cache`: not supported?
+* `redirect`: enforcing `follow`?
+* `referrer`: enforcing same-origin URL?
+* `referrerPolicy`: enforcing `same-origin`?
+* `integrity`: not supported?
+* `priority`: enforcing `auto`?
 
-### Payload
+As shown above, at least `keepalive: true` and `method` need to be enforced.
+If going with this route, can we also consider the [PendingRequest API] approach that proposes a subclass of `Request` to enforce the above?
 
-The payload for the beacon will depend on the method used for sending the beacon.
-If sent using a POST request, the beacon’s data will be included in the body of the POST request exactly as when [`navigator.sendBeacon`][sendBeacon-api] is used.
+#### 2. `sendAfterBeingBackgroundedTimeout` and `deferSend`
 
-For beacons sent via a GET request, there will be no request body.
+> **NOTE:** Discussions in [#73], [#13].
 
-Requests sent by the pending beacon will include cookies
-(the same as requests from [`navigator.sendBeacon`][sendBeacon-api]).
+```js
+class DeferSend {
+  constructor(sendAfterBeingBackgroundedTimeout)
+}
+```
+
+Current proposal is to make `deferSend` a class, and `sendAfterBeingBackgroundedTimeout` its optional field.
+
+1. Should this be a standalone option in [`RequestInit`]? But it is not relevant to other existing fetch options.
+2. Should it be after `hidden` or `pagehide` (bfcached)? (Previous discussion in #13).
+3. Need user input for how desirable for this option.
+4. Need better naming suggestion.
+
+#### 3. Promise
+
+> **NOTE:** Discussions in [#74].
+
+To maintain the same semantic, browser should resolve Promise when the pending request is sent. But in reality, the Promise may or may not be resolved, or resolved when the page is in bfcache and JS context is frozen. User should not rely on it.
+
+#### 4. `SendSignal`
+
+> **NOTE:** Discussions in [#75].
+
+This is to observe a event to tell if a `deferSend` request is still pending.
+
+To prevent from data races, the underlying implementation should ensure that renderer is authoritative to the request's send state when it's alive. Similar to [this discussion](https://github.com/WICG/pending-beacon/issues/10#issuecomment-1189804245) for PendingBeacon.
+
+#### 5. Handling Request Size Limit
+
+> **NOTE:** Discussions in [#76].
+
+As setting `deferSend` implies `keepalive` is also true, such request has to share the same size limit budget as a regular keepalive request’s [one][fetch-keepalive-quota]: "for each fetch group, the sum of contentLength and inflightKeepaliveBytes <= 64 KB".
+
+To comply with the limit, there are several options:
+
+1. `fetch()` throws `TypeError` whenever the budget has exceeded. Users will not be able to create new pending requests.
+2. The browser forces sending out other existing pending requests, in FIFO order, when the budget has exceeded. For a single request > 64KB, `fetch()` should still throws `TypeError`.
+3. Ignore the size limit if [BackgroundFetch] Permission is enabled for the page.
+
+
+#### 6. Permissions Policy
+
+> **NOTE:** Discussions in [#77].
+
+Given that most reporting API providers are crossed origins, we propose to allow this feature by default for 3rd-party iframes.
+User should be able to opt out the feature with the corresponding Permissions Policy.
+
 
 ### Extensions
 
@@ -254,59 +245,6 @@ This section is here merely to note that there are several considerations browse
 * Robustness against crashes/forced terminations/network outages.
 * User privacy. See the [Privacy Considerations](#privacy-considerations) section.
 
-### Sync vs Async implementation
-
-The problem with users accessing beacon states, e.g. `pending`, is that it forces us to choose between a synchronous API (that is harder to implement) or an asynchronous API (that is harder to use).
-
-#### Sync implementation (chosen)
-
-With a syncAPI design, the process running JS is authoritative for the state of the beacon
-and the following code is correct.
-
-```js
-beacon = new PendingBeacon(url, {backgroundTimeout: 1000});
-beacon.setData(initialData);
-window.setTimeout(() => {
-  // By the time this runs, the beacon might have been sent.
-  // So check before settings data.
-  if (!beacon.pending) {
-    beacon = new PendingBeacon(...);
-  }
-  beacon.setData(newData);
-}, someTimeout);
-```
-
-However this is harder to implement since the browser now have to coordinate multiple processes
-The JS process cannot be the only process involved in the beacon or it will not be crash-resilient and it will also have many of the same problems that an `unload` event handler has.
-
-#### Async implementation
-
-With an async implementation, the [code above](#sync-implementation-chosen) has a race condition.
-`pending` may return true but the beacon may be sent immediately after in another process.
-This forces us to have an async API where JS can attempt to set new data and is informed afterwards as to whether that succeeded.
-E.g.
-
-```js
-beacon = new PendingBeacon(url, {backgroundTimeout: 1000});
-beacon.setData(initialData);
-...
-beacon.setData(newData).then(() => {
-  // Data was updated successfully.
-}).catch(() => {
-  // Data was not updated successfully
-  beacon = new PendingBeacon(...);
-  beacon.setData(newData);
-});
-
-```
-
-The code above is *still not correct*.
-The call to `setData` does not block and so there may be multiple outstanding calls to `setData`
-now their `catch` code has to be coordinated so that only one replacement beacon is created
-and the latest data is set on the beacon
-(and setting *that* latest data will be async and subject to the same problems).
-
-This is makes it very hard to use the async API correctly.
 
 ## Privacy Considerations
 
@@ -363,41 +301,6 @@ and it would not be possible to restrict what that callback does
 It also doesn’t allow for other niceties such as resilience against crashes or batching of beacons,
 and complicates the already sufficiently complicated page lifecycle.
 
-### Extending `fetch()` API
-
-> **NOTE:** Discussions in [#52] and [#50].
-
-Another alternative is to extend the [Fetch API] to support the [requirements](#requirements).
-
-The existing Fetch with `keepalive` option, combined with `visibilitychagne` listener, can approximate part of (1):
-
-```js
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    fetch('/send_beacon', {keepalive: true});
-    // response may be dropped.
-  }
-});
-```
-
-or a new option `deferSend` may be introduced to cover the entire (1):
-
-```js
-// defer request sending on `hidden` or bfcahce eviction etc.
-fetch('/send_beacon', {deferSend: true});
-// Promise may not resolve and response may be dropped.
-```
-
-#### Problem
-
-However, there are several problem with this approach:
-
-1. **The Fetch API shape is not designed for this (1) purpose.** Fundamentally, `window.fetch` returns a Promise with Response to resolve, which don't make sense for beaconing at page discard that doesn't expect to process response.
-2. **The (1) mechanism is too unrelated to be added to the Fetch API**. Even just with a new option, bundling it with a visibility event-specific behavior just seems wrong in terms of the API's scope.
-3. **The Fetch API does not support updating request URL or data.** This is simply not possible with its API shape. Users have to re-fetch if any update happens.
-
-The above problems suggest that a new API is neccessary for our purpose.
-
 ### Extending `navigator.sendBeacon()` API
 
 > **NOTE:** Discussions in [WebKit's standard position](https://github.com/WebKit/standards-positions/issues/85#issuecomment-1418381239).
@@ -415,7 +318,7 @@ To meet the [requirements](#requirements) and to make the new API backward compa
 navigator.sendBeacon(url, data, fetchOptions): PendingBeacon
 ```
 
-An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the above [PendingBeacon](#pendingbeacon) section. Some details to note:
+An optional dictionary argument `fetchOptions` can be passed in, which changes the return value from `bool` to `PendingBeacon` proposed in the [`PendingBeacon`-based API](#pendingbeacon-based-api) section. Some details to note:
 
 1. The proposal would like to support both `POST` and `GET` requests. As the existing API only support `POST` beacons, passing in `fetchOptions` with `method: GET` should enable queuing `GET` beacons.
 2. `fetchOptions` can only be a subset of the [Fetch API]'s [`RequestInit`] object:
@@ -455,6 +358,16 @@ The extra `beaconOptions` is a dictionary taking `backgroundTimeout` and `timeou
 
 At the end, this proposal also requires an entirely new API, just under the existing `navigator` namespace. The advantage is that we might be able to merge this proposal into [w3c/beacon] and eliminate the burden to maintain a new spec.
 
+### `PendingBeacon`-based API
+
+> **NOTE**: Offline discussions from [WebKit's standard position](https://github.com/WebKit/standards-positions/issues/85#issuecomment-1418381239), [Fetch-based design][#70] and [PendingRequest API] suggest that a fetch-based approach is preferred.
+
+ This proposal includes a stateful JavaScript API family, a new interface `PendingBeacon` and two of its implementations `PendingGetBeacon` and `PendingPostBeacon`.
+ An instance of them represents a pending HTTP request that will be sent by the browser at some point in the future.
+ Calling this constructor queues the beacon for sending by the browser;
+ even if the result goes out of scope, the beacon will still be sent, unless deactivated beforehand.
+
+ See [previous version of the explainer][pendingbeacon-proposal] for more details.
 
 ### Write-only API
 
@@ -492,21 +405,27 @@ The use case is for logging a total-so-far.
 The server would typically only pay attention to the latest value.
 
 [`XMLHttpRequest`]: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
-[sendbeacon-api]: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
 [`fetch`]: https://developer.mozilla.org/en-US/docs/Web/API/fetch
-[sendBeacon-w3]: https://www.w3.org/TR/beacon/#sec-sendBeacon-method
-[ArrayBuffer-api]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer
-[ArrayBufferView-api]: https://developer.mozilla.org/en-US/docs/Web/API/ArrayBufferView
-[Blob-api]: https://developer.mozilla.org/en-US/docs/Web/API/Blob
-[FormData-api]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
-[URLSearchParams-api]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [#3]: https://github.com/WICG/pending-beacon/issues/3
+[#13]: https://github.com/WICG/pending-beacon/issues/13
 [#27]: https://github.com/WICG/pending-beacon/issues/27
 [#30]: https://github.com/WICG/pending-beacon/issues/30
 [#34]: https://github.com/WICG/pending-beacon/issues/34
 [bfcache]: https://web.dev/bfcache/
 [#50]: https://github.com/WICG/pending-beacon/issues/50
 [#52]: https://github.com/WICG/pending-beacon/issues/52
+[#70]: https://github.com/WICG/pending-beacon/issues/70
+[#72]: https://github.com/WICG/pending-beacon/issues/72
+[#73]: https://github.com/WICG/pending-beacon/issues/73
+[#74]: https://github.com/WICG/pending-beacon/issues/74
+[#75]: https://github.com/WICG/pending-beacon/issues/75
+[#76]: https://github.com/WICG/pending-beacon/issues/76
+[#77]: https://github.com/WICG/pending-beacon/issues/77
 [Fetch API]: https://fetch.spec.whatwg.org/#fetch-api
 [`RequestInit`]: https://fetch.spec.whatwg.org/#requestinit
 [w3c/beacon]: https://github.com/w3c/beacon
+[pendingbeacon-proposal]: https://github.com/mingyc/pending-beacon/blob/77291c0d9a98dbe35244df663010ba1f69558451/README.md#javascript-api
+[fetch-keepalive-quota]: https://fetch.spec.whatwg.org/#http-network-or-cache-fetch
+[BackgroundFetch]: https://developer.mozilla.org/en-US/docs/Web/API/Background_Fetch_API#browser_compatibility
+[HTTP methods]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[PendingRequest API]: https://docs.google.com/document/d/1QQFFa6fZR4LUiyNe9BJQNK7dAU36zlKmwf5gcBh_n2c/edit#heading=h.xs53e9immw2r
