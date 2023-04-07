@@ -67,12 +67,12 @@ The following 3 requirements are critical:
 
 One possible requirement that is missing some clarity is
 
-* The beacon should be cancelable.
+* The beacon should be updatable after initialization.
 
 This introduces many implementation complications in a multi-process browser.
-In order to be resilient to crashes, the beacons must have a presence outside of their process
-but in order to be cancellable (without race conditions) the state in process must be authoritative.
-If perfectly cancellable beacons are not needed, then the [alternative write-only API](#write-only-api) becomes possible.
+In order to be resilient to crashes, the beacons must have a presence outside of their process.
+However, in order to allow synchronous mutating operations, e.g. update or cancel, without introducing data races, the state in process must be authoritative.
+If perfectly mutating beacons are not needed, then the [alternative write-only API](#write-only-api) becomes possible.
 
 ## Design
 
