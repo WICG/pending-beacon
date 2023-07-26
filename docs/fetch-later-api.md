@@ -138,6 +138,32 @@ class PendingBeacon {
 }
 ```
 
+## Alternatives Considered
+
+### 1. BackgroundSync API
+
+The [Background Synchronization API][backgroundsync-api] allows web applications to defer requests to their service worker to handle at a later time, if the device is offline.
+
+However, to use the API requires the control over a service worker from the top-level window open for the origin, which is impossible for 3rd party iframes that want to perform beaconing.
+
+Note that there are discussions ([#3], [#30]) to address PendingBeacon (or fetchLater)'s privacy requirements by reusing BackgroundSync's access permission.
+
+[backgroundsync-api]: https://github.com/WICG/background-sync/blob/main/explainers/sync-explainer.md#the-api
+[#3]: https://github.com/WICG/pending-beacon/issues/3#issuecomment-1531639163
+[#30]: https://github.com/WICG/pending-beacon/issues/30#issuecomment-1333869614
+
+### 2. BackgroundFetch API
+
+The [Background Fetch API][backgroundfetch-api] provides a way for service workers to defer processing until a user is connected.
+
+Similar to [BackgroundSync API](#1-backgroundsync-api), using BackGroundFetch also requires the control over a service worker, which is impossible for 3rd party iframes that want to perform beaconing.
+
+[backgroundfetch-api]: https://wicg.github.io/background-fetch/
+
+### 3. Other Alternatives
+
+See also PendingBeacon's [Alternative Approaches](alternative-approaches.md).
+
 ## Open Discussions
 
 See [Deferred fetching PR](https://github.com/whatwg/fetch/pull/1647).
