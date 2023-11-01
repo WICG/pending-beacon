@@ -2,16 +2,16 @@
 
 *This document is an explainer for fetchLater() API. It is evolved from a series of [discussions and concerns](https://github.com/WICG/pending-beacon/issues/70) around the experimental PendingBeacon API and the draft PendingRequest API.*
 
-[Draft Specification](https://whatpr.org/fetch/1647/094ea69...152d725.html)
+[Draft Specification](https://whatpr.org/fetch/1647/9ca4bda...37a66c9.html)
 
 ## Overview
 
 `fetchLater()` is a JavaScript API to request a deferred fetch. Once requested, the deffered request is queued by the browser, and will be invoked in one of the following scenarios:
 
 * The document is destroyed.
-* The document is bfcached and not restored after a certain time.
+* After a user-specified time, even if the document is in bfcache.
 
-The API returns a `FetchLaterResult` that contains a boolean field `sent` that may be updated to tell whether the deferred request has been sent out or not.
+The API returns a `FetchLaterResult` that contains a boolean field `activated` that may be updated to tell whether the deferred request has been sent out or not.
 On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated, as the page is already gone.
 
 Note that from the point of view of the API user, the exact send time is unknown.
@@ -19,7 +19,7 @@ Note that from the point of view of the API user, the exact send time is unknown
 ### Constraints
 
 * A deferred fetch request body, if exists, has to be a byte sequence. Streaming requests are not allowed.
-* The total size of deferred fetch request bodies are limited to 64KB per origin. Exceeding this would immediately reject with a QuotaExceeded.
+* The total size of deferred fetch request bodies are limited to 64KB per origin. Exceeding this would immediately be rejected with a QuotaExceeded.
 
 ## Key scenarios
 
@@ -32,7 +32,7 @@ error from server, and the caller will not be able to tell.
 fetchLater('/send_beacon');
 ```
 
-### Defer a `POST` request until around 1 minute after page is bfcached
+### Defer a `POST` request for around 1 minute
 
 > **NOTE**: **The actual sending time is unkown**, as the browser may wait for a longer or shorter period of time, e.g., to optimize batching of deferred fetches.
 
@@ -41,7 +41,7 @@ fetchLater({
   url: '/send_beacon'
   method: 'POST'
   body: getBeaconData(),
-}, {backgroundTimeout: 60000 /* 1 minute */});
+}, {activateAfter: 60000 /* 1 minute */});
 ```
 
 ### Send a request when page is abondoned
@@ -50,12 +50,12 @@ fetchLater({
 let beaconResult = null;
 
 function createBeacon(data) {
-  if (beaconResult && beaconResult.sent) {
+  if (beaconResult && beaconResult.activated) {
     // Avoid creating duplicated beacon if the previous one is still pending.
     return;
   }
 
-  beaconResult = fetchLater(data, {backgroundTimeout: 0});
+  beaconResult = fetchLater(data, {activateAfter: 0});
 }
 
 addEventListener('pagehide', () => createBeacon(...));
@@ -74,7 +74,7 @@ let beaconResult = null;
 let beaconAbort = null;
 
 function updateBeacon(data) {
-  const pending = !beaconResult || !beaconResult.sent;
+  const pending = !beaconResult || !beaconResult.activated;
   if (pending && beaconAbort) {
     beaconAbort.abort();
   }
@@ -83,7 +83,7 @@ function updateBeacon(data) {
 }
 
 function createBeacon(data) {
-  if (beaconResult && beaconResult.sent) {
+  if (beaconResult && beaconResult.activated) {
     // Avoid creating duplicated beacon if the previous one is still pending.
     return;
   }
@@ -104,18 +104,18 @@ The following implementation try to simulate the behavior of [`PendingBeacon` AP
 class PendingBeacon {
   #abortController = null;
   #requestInfo = null;
-  #backgroundTimeout = null;
+  #activateAfter = null;
   #result = null;
 
-  constructor(requestInfo, backgroundTimeout) {
+  constructor(requestInfo, activateAfter) {
     this.#requestInfo = requestInfo;
-    this.#backgroundTimeout = backgroundTimeout;
+    this.#activateAfter = activateAfter;
     this.#schedule();
   }
 
-  // Schedules a deferred request to send on page destroyed or after page in bfcached + `this.#backgroundTimeout` time.
+  // Schedules a deferred request to send on page destroyed or after page in bfcached + `this.#activateAfter` time.
   #schedule() {
-    if (this.#result && this.#result.sent) {
+    if (this.#result && this.#result.activated) {
       this.#abortController = null;
     }
     if (this.#abortController) {
@@ -125,7 +125,7 @@ class PendingBeacon {
 
     this.#abortController = new AbortController();
     this.#requestInfo.signal = this.#abortController.signal;
-    #result = fetchLater(this.#requestInfo, {this.#backgroundTimeout});
+    #result = fetchLater(this.#requestInfo, {activateAfter: this.#activateAfter});
   }
 
   // Aborts the deferred request and schedules a new one.
