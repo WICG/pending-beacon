@@ -2,7 +2,12 @@
 
 *This document is an explainer for fetchLater() API. It is evolved from a series of [discussions and concerns](https://github.com/WICG/pending-beacon/issues/70) around the experimental PendingBeacon API and the draft PendingRequest API.*
 
-[Draft Specification](https://whatpr.org/fetch/1647/9ca4bda...37a66c9.html)
+* [Specification PR](https://github.com/whatwg/fetch/pull/1647)
+* [Draft Specification](https://whatpr.org/fetch/1647/9ca4bda...37a66c9.html)
+
+## Motivation
+
+See [Motivation - Pending Beacon API](../README.md#motivation).
 
 ## Overview
 
@@ -10,8 +15,9 @@
 
 * The document is destroyed.
 * After a user-specified time, even if the document is in bfcache.
+* Browser decides its time to send it.
 
-The API returns a `FetchLaterResult` that contains a boolean field `activated` that may be updated to tell whether the deferred request has been sent out or not.
+The API returns a `FetchLaterResult` that contains a read-only boolean field `activated` that may be updated by Browser to tell whether the deferred request has been sent out or not.
 On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated, as the page is already gone.
 
 Note that from the point of view of the API user, the exact send time is unknown.
@@ -137,6 +143,33 @@ class PendingBeacon {
   // sendNow(): User should directly call `fetch(requestInfo)` instead.
 }
 ```
+
+## Security and Privacy
+
+For a high-level overview, see [Self-Review Questionnaire: Security and Privacy](security-privacy-questionnaire.md).
+
+This design has no impact on the existing fetch API.
+However, the following security & privacy requirements have been discussed on GitHub and are important to follow:
+
+### Security Considerations
+
+- Deferred requests must be sent over HTTPS. See [security review feedback #27][#27].
+
+[#27]: https://github.com/WICG/pending-beacon/issues/27
+
+### Privacy Considerations
+
+- Deferred requests can only be sent after the page becomes inactive, i.e. bfcached, if BackgroundSync permission is enabled for the Origin of the page. See [privacy review feedback #30][#30].
+
+[#30]: https://github.com/WICG/pending-beacon/issues/30#issuecomment-1333869614
+
+### Implementation-Specific Considerations
+
+Implementation-specific considerations are not listed in this explainer.
+Please refer to each browser implementation design for more details:
+
+- [Chromium]: https://docs.google.com/document/d/1U8XSnICPY3j-fjzG35UVm6zjwL6LvX6ETU3T8WrzLyQ/edit#heading=h.kztg1uvdyoki
+
 
 ## Alternatives Considered
 

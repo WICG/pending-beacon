@@ -1,13 +1,13 @@
 # [Self-Review Questionnaire: Security and Privacy][self-review]
 
-This questionnaire covers the Pending Beacon API [explainer], based on the [W3C TAG Self-Review Questionnaire: Security and Privacy][self-review].
+This questionnaire covers the `FetchLater API` [explainer], based on the [W3C TAG Self-Review Questionnaire: Security and Privacy][self-review].
 
 1. What information does this feature expose, and for what purposes?
      > The API intends to provide a reliable way for a document to send data to the target URL on document discard, or sometimes later after the document entering bfcache (becoming non-"fully active"), by making the user agent process the "send" requests queued by calling the API.
      >
-     > The user agent should not expose the queued requests to new network providers after users navigating away from the document where the requests were queued.
+     > The user agent should not expose the queued requests to new network providers after users navigating away from the document where the requests were queued without user permission.
      >
-     > Users can disallow the "sending on document discard" behavior by disabling BackgroundSync for an origin.
+     > Users can disallow the "sending after navigating away" behavior by disabling BackgroundSync for an origin.
      >
      > The API only sends requests in CORS mode with Same-Origin credentials mode.
 
@@ -43,7 +43,7 @@ This questionnaire covers the Pending Beacon API [explainer], based on the [W3C 
      > 2. Queued requests persist across browsing session if ["Crash Recovery"][crash-recovery] is supported.
      > We are still unsure how to address privacy concern for this, so it's not specified yet.
      >
-     > Note: The API provides a way to queue HTTP requests on a document which will be send by the user agent sometimes later, but before the document is discarded/browsing session ends if without "Crash Recovery".
+     > Note: The API provides a way to queue HTTPS requests on a document which will be send by the user agent sometimes later, but before the document is discarded/browsing session ends if without "Crash Recovery".
 
 6. Do the features in your specification expose information about the underlying platform to origins?
 
@@ -76,7 +76,6 @@ This questionnaire covers the Pending Beacon API [explainer], based on the [W3C 
 13. How does this specification distinguish between behavior in first-party and third-party contexts?
 
      > Both 1st party and 3rd party can use the API.
-     > But the API only sends requests in CORS mode with Same-Origin credentials mode.
 
 14. How do the features in this specification work in the context of a browser’s Private Browsing or Incognito mode?
 
@@ -93,11 +92,11 @@ This questionnaire covers the Pending Beacon API [explainer], based on the [W3C 
 
 17. How does your feature handle non-"fully active" documents?
 
-     > The API provides some mechanism for users to specify when to send the queued requests after the document becomes non-"fully active".
+     > The API provides some mechanism for users to specify when to send the queued requests after custom time, even if the document is non-"fully active" at the specified time.
      >
-     > The data of the queued requests should only come from the API calls when the document is still active. If the document transits from non-"fully active" to fully active again, the API can continue to accumulate more data from the API calls in the document.
+     > The data of the queued requests should only come from the API calls when the document is still active. If the document transits from non-"fully active" to fully active again, the API can continue to be pending, and potentially be aborted by uers from the API calls in the document.
      >
-     > If the network provider changes after the document becomes non-"fully active", the user agent should not expose the queued requests to the new network provider.
+     > If BackgroundSync permission is not enabled for the Origin of the document, the user agent should not allow the queued requests after the document becomes non-"fully active", i.e. they should all be sent out on navigating away.
      >
      > The user agent sends out all queued requests if a non-"fully active" document gets unloaded (discard).
 
@@ -106,5 +105,5 @@ This questionnaire covers the Pending Beacon API [explainer], based on the [W3C 
      > How long can a request be queued on a document by this feature?
 
 [self-review]: https://w3ctag.github.io/security-questionnaire/
-[explainer]: https://github.com/WICG/pending-beacon/blob/main/README.md
+[explainer]: https://github.com/WICG/pending-beacon/blob/main/docs/fetch-later-api.md
 [crash-recovery]: https://github.com/WICG/pending-beacon/issues/34
