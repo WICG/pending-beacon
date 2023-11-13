@@ -153,22 +153,20 @@ However, the following security & privacy requirements have been discussed on Gi
 
 ### Security Considerations
 
-- Deferred requests must be sent over HTTPS. See [security review feedback #27][#27].
+* Deferred requests must be sent over HTTPS. See [security review feedback #27][#27].
 
 [#27]: https://github.com/WICG/pending-beacon/issues/27
 
 ### Privacy Considerations
 
-- Deferred requests can only be sent after the page becomes inactive, i.e. bfcached, if BackgroundSync permission is enabled for the Origin of the page. See [privacy review feedback #30][#30].
-
-[#30]: https://github.com/WICG/pending-beacon/issues/30#issuecomment-1333869614
+* Deferred requests can only be sent after the page becomes inactive, i.e. bfcached, if BackgroundSync permission is enabled for the Origin of the page. See [privacy review feedback #30][#30].
 
 ### Implementation-Specific Considerations
 
 Implementation-specific considerations are not listed in this explainer.
 Please refer to each browser implementation design for more details:
 
-- [Chromium](https://docs.google.com/document/d/1U8XSnICPY3j-fjzG35UVm6zjwL6LvX6ETU3T8WrzLyQ/edit#heading=h.kztg1uvdyoki)
+* [Chromium](https://docs.google.com/document/d/1U8XSnICPY3j-fjzG35UVm6zjwL6LvX6ETU3T8WrzLyQ/edit#heading=h.kztg1uvdyoki)
 
 
 ## Alternatives Considered
