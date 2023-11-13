@@ -168,7 +168,7 @@ However, the following security & privacy requirements have been discussed on Gi
 Implementation-specific considerations are not listed in this explainer.
 Please refer to each browser implementation design for more details:
 
-- [Chromium]: https://docs.google.com/document/d/1U8XSnICPY3j-fjzG35UVm6zjwL6LvX6ETU3T8WrzLyQ/edit#heading=h.kztg1uvdyoki
+- [Chromium](https://docs.google.com/document/d/1U8XSnICPY3j-fjzG35UVm6zjwL6LvX6ETU3T8WrzLyQ/edit#heading=h.kztg1uvdyoki)
 
 
 ## Alternatives Considered
