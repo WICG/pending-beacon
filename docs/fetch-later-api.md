@@ -31,7 +31,7 @@ Note that from the point of view of the API user, the exact send time is unknown
 
 ### Defer a `GET` request until page is destroyed or evicted from bfcache
 
-No matter the request succeeds or not, the browser will drop the resonse or
+No matter the request succeeds or not, the browser will drop the response or
 error from server, and the caller will not be able to tell.
 
 ```js
