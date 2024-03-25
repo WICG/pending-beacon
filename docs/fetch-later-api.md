@@ -153,8 +153,8 @@ This section comes from the discussion in [#87].
 ### Permissions Policy: `deferred-fetch`
 
 * Define a new Permissions Policy `deferred-fetch`, default to `self`.
-* Every top-level document has a quota of **640KB** for all fetchLater requests from its descendants and itself.
-* Every reporting origin within a top-level document has a quota of **64KB** across all fetchLater requests the document can issue.
+* Every top-level document has a quota of **640KB** for all fetchLater request bodies from its descendants and itself.
+* Every reporting origin within a top-level document has a quota of **64KB** across all fetchLater request bodies the document can issue.
 * A cross-origin child document is only allowed to make fetchLater requests if its origin is allowed by its top-level document’s `deferred-fetch` policy.
 
 Both quotas may subject to change if we have more developer feedback.
