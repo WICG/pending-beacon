@@ -25,7 +25,7 @@ Note that from the point of view of the API user, the exact send time is unknown
 ### Constraints
 
 * A deferred fetch request body, if exists, has to be a byte sequence. Streaming requests are not allowed.
-* The total size of deferred fetch request bodies are limited to 64KB per origin. Exceeding this would immediately be rejected with a QuotaExceeded.
+* A new permissions policy `deferred-fetch` is defined to control the feature availability and to delegate request quota. See [Permissions Policy and Quota](#permissions-policy-and-quota).
 
 ## Key scenarios
 
@@ -143,6 +143,93 @@ class PendingBeacon {
   // sendNow(): User should directly call `fetch(requestInfo)` instead.
 }
 ```
+
+## Permissions Policy and Quota
+
+This section comes from the discussion in [#87].
+
+[#87]: https://github.com/WICG/pending-beacon/issues/87#issuecomment-1985358609
+
+### Permissions Policy: `deferred-fetch`
+
+* Define a new Permissions Policy `deferred-fetch`, default to `self`.
+* Every top-level document has a quota of **640KB** for all fetchLater requests from its descendants and itself.
+* Every reporting origin within a top-level document has a quota of **64KB** across all fetchLater requests the document can issue.
+* A cross-origin child document is only allowed to make fetchLater requests if its origin is allowed by its top-level document’s `deferred-fetch` policy.
+
+Both quotas may subject to change if we have more developer feedback.
+
+### Default Behavior
+
+Without any configuration, a top-level document can make an unlimited number (N) of fetchLater requests,
+but the total of their body size (X1+X2+ … +XN) of the pending fetchLater requests must <= 64KB for a single reporting origin, and <= 640KB across all reporting origins.
+
+```html
+<!-- In a top-level document from https://a.com -->
+<script>
+  fetchLater("https://a.com", {method: "POST", body: "<X1-bytes data>"});
+  fetchLater("https://a.com", {method: "POST", body: "<X2-bytes data>"});
+  fetchLater("https://b.com", {method: "POST", body: "<X3-bytes data>"});
+  fetchLater("https://c.com", {method: "POST", body: "<X4-bytes data>"});
+
+  fetchLater("https://a.com", {method: "GET"});
+</script>
+```
+
+In the above example, the following requirements must be met:
+
+* Quota for all request bodies X1+X2+X3+X4 <= 640KB
+* Quota for request bodies for the origin `https://a.com` X1+X2 <= 64KB
+* Quota for request bodies for the origin `https://b.com` X3 <= 64KB
+* Quota for request bodies for the origin `https://c.com` X4 <= 64KB
+
+Note that only the size of a POST body counts for the total limit.
+
+### Delegating Quota to Sub-frames
+
+A top-level document can grant additional origins in its descendant to make fetchLater calls by the permissions policy [`deferred-fetch`][deferred-fetch],
+which also grants **and shares** the same quota to every of them.
+For example, the following iframes “frame-b” and “frame-c” all share the same quota from the their root document:
+
+[deferred-fetch]: https://github.com/w3c/webappsec-permissions-policy/issues/544
+
+```html
+<!--
+In a top-level document from https://a.com
+
+Permissions-Policy: deferred-fetch=(self "https://b.com" "https://c.com")
+-->
+
+<script>
+  fetchLater("https://a.com", {method: "POST", body: "<X1-bytes data>"});
+  fetchLater("https://b.com", {method: "POST", body: "<X2-bytes data>"});
+  fetchLater("https://c.com", {method: "POST", body: "<X3-bytes data>"});
+</script>
+
+<iframe id="frame-b" src="https://b.com/iframe" allow="deferred-fetch 'self'">
+  <!-- In https://b.com/iframe -->
+  <script>
+    fetchLater("https://a.com", {method: "POST", body: "<X4-bytes data>"});
+    fetchLater("https://b.com", {method: "POST", body: "<X5-bytes data>"});
+    fetchLater("https://c.com", {method: "POST", body: "<X6-bytes data>"});
+  </script>
+</iframe>
+<iframe id="frame-c" src="https://c.com/iframe" allow="deferred-fetch 'self'">
+  <!-- In https://c.com/iframe -->
+  <script>
+    fetchLater("https://a.com", {method: "POST", body: "<X7-bytes data>"});
+    fetchLater("https://b.com", {method: "POST", body: "<X8-bytes data>"});
+    fetchLater("https://c.com", {method: "POST", body: "<X9-bytes data>"});
+  </script>
+</iframe>
+```
+
+In the above example, the following requirements must be met:
+
+* Quota for all request bodies X1+X2+...+X9 <= 640KB
+* Quota for request bodies for origin `https://a.com` X1+X4+X7 <= 64KB
+* Quota for request bodies for origin `https://b.com` X2+X5+X8 <= 64KB
+* Quota for request bodies for origin `https://c.com` X3+X6+X9 <= 64KB
 
 ## Security and Privacy
 
