@@ -146,7 +146,7 @@ class PendingBeacon {
 
 ## Permissions Policy and Quota
 
-This section comes from the discussion in [#87].
+This section summarizes the discussion in [#87], and is still subject to change.
 
 [#87]: https://github.com/WICG/pending-beacon/issues/87#issuecomment-1985358609
 
@@ -161,16 +161,16 @@ Both quotas may subject to change if we have more developer feedback.
 
 ### Default Behavior
 
-Without any configuration, a top-level document can make an unlimited number (N) of fetchLater requests,
-but the total of their body size (X1+X2+ … +XN) of the pending fetchLater requests must <= 64KB for a single reporting origin, and <= 640KB across all reporting origins.
+Without any configuration, a top-level document can make an unlimited number of fetchLater requests,
+but the total of their body sizes of the pending fetchLater requests must <= 64KB for a single reporting origin, and <= 640KB across all reporting origins.
 
 ```html
 <!-- In a top-level document from https://a.com -->
 <script>
-  fetchLater("https://a.com", {method: "POST", body: "<X1-bytes data>"});
-  fetchLater("https://a.com", {method: "POST", body: "<X2-bytes data>"});
-  fetchLater("https://b.com", {method: "POST", body: "<X3-bytes data>"});
-  fetchLater("https://c.com", {method: "POST", body: "<X4-bytes data>"});
+  fetchLater("https://a.com", {method: "POST", body: "<32KB data>"});
+  fetchLater("https://a.com", {method: "POST", body: "<32KB data>"});
+  fetchLater("https://b.com", {method: "POST", body: "<64KB data>"});
+  fetchLater("https://c.com", {method: "POST", body: "<1KB data>"});
 
   fetchLater("https://a.com", {method: "GET"});
 </script>
@@ -178,10 +178,10 @@ but the total of their body size (X1+X2+ … +XN) of the pending fetchLater requ
 
 In the above example, the following requirements must be met:
 
-* Quota for all request bodies X1+X2+X3+X4 <= 640KB
-* Quota for request bodies for the origin `https://a.com` X1+X2 <= 64KB
-* Quota for request bodies for the origin `https://b.com` X3 <= 64KB
-* Quota for request bodies for the origin `https://c.com` X4 <= 64KB
+* Quota for all request bodies `(32+32+64+64)KB <= 640KB`
+* Quota for request bodies for the origin `https://a.com` `(32+32)KB <= 64KB`
+* Quota for request bodies for the origin `https://b.com` `64KB <= 64KB`
+* Quota for request bodies for the origin `https://c.com` `1KB <= 64KB`
 
 Note that only the size of a POST body counts for the total limit.
 
