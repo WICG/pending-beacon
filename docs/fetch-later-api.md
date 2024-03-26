@@ -181,7 +181,7 @@ In the above example, the following requirements must be met:
 * Quota for all request bodies `(32+32+64+64)KB <= 640KB`
 * Quota for request bodies for the origin `https://a.com` `(32+32)KB <= 64KB`
 * Quota for request bodies for the origin `https://b.com` `64KB <= 64KB`
-* Quota for request bodies for the origin `https://c.com` `1Kb <= 64KB`
+* Quota for request bodies for the origin `https://c.com` `1KB <= 64KB`
 
 Note that only the size of a POST body counts for the total limit.
 
