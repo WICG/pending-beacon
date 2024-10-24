@@ -144,32 +144,27 @@ class PendingBeacon {
 }
 ```
 
-## Permissions Policy and Quota
+## Quota and Permissions Policy
 
-This section summarizes the discussion in [#87], and is still subject to change.
+### Overview
 
-[#87]: https://github.com/WICG/pending-beacon/issues/87#issuecomment-1985358609
-
-### Permissions Policy: `deferred-fetch`
-
-* Define a new Permissions Policy `deferred-fetch`, default to `self`.
-* Every top-level document has a quota of **640KB** for all fetchLater request bodies from its descendants and itself.
-* Every reporting origin within a top-level document has a quota of **64KB** across all fetchLater request bodies the document can issue.
-* A cross-origin child document is only allowed to make fetchLater requests if its origin is allowed by its top-level document’s `deferred-fetch` policy.
-
-Both quotas may subject to change if we have more developer feedback.
+Deferred fetches are different from normal fetches, due to the fact that they are batched and sent once the tab is closed, and at that point the user has no way to abort them.
+To avoid situations where documents abuse this bandwidth to send unlimited amounts of data over the network, the overall quota for a top level document is capped at 640KB (which should be enough for anyone).
+Since this cap makes deferred fetch bandwidth a scarce resource which needs to be shared between multiple reporting origins (e.g. several RUM libraries) and also across subframes of multiple origins, the platform
+provides a reasonable default division of this quota, and also provides knobs, in the form of permission policies, to allow dividing it in a different way when desired.
 
 ### Default Behavior
 
-Without any configuration, a top-level document can make an unlimited number of fetchLater requests,
-but the total of their body sizes of the pending fetchLater requests must <= 64KB for a single reporting origin, and <= 640KB across all reporting origins.
+Without any configuration, a top-level document and its same-origin descendant subframes can invoke an unlimited number of `fetchLater` requests, but with the following limitations:
+1. The total bandwidth taken by these requests (counting the URL, custom headers and POST body size) must not exceed 64KB for each reporting origin
+2. The total bandwidth for all the reporting origins must not exceed 512KB.
 
 ```html
 <!-- In a top-level document from https://a.com -->
 <script>
-  fetchLater("https://a.com", {method: "POST", body: "<32KB data>"});
-  fetchLater("https://a.com", {method: "POST", body: "<32KB data>"});
-  fetchLater("https://b.com", {method: "POST", body: "<64KB data>"});
+  fetchLater("https://a.com", {method: "POST", body: "<16KB data>"});
+  fetchLater("https://a.com", {method: "POST", body: "<16KB data>"});
+  fetchLater("https://b.com", {method: "POST", body: "<48KB data>"});
   fetchLater("https://c.com", {method: "POST", body: "<1KB data>"});
 
   fetchLater("https://a.com", {method: "GET"});
@@ -178,21 +173,43 @@ but the total of their body sizes of the pending fetchLater requests must <= 64K
 
 In the above example, the following requirements must be met:
 
-* Quota for all request bodies `(32+32+64+64)KB <= 640KB`
-* Quota for request bodies for the origin `https://a.com` `(32+32)KB <= 64KB`
-* Quota for request bodies for the origin `https://b.com` `64KB <= 64KB`
-* Quota for request bodies for the origin `https://c.com` `1KB <= 64KB`
+* Quota for all request bodies `(13+16+13+16+13+48+13+1+13)KB <= 512KB`
+* Quota for request bodies for the origin `https://a.com` `(13+16+13+16+13)KB <= 64KB`
+* Quota for request bodies for the origin `https://b.com` `13KB+48KB <= 64KB`
+* Quota for request bodies for the origin `https://c.com` `13KB+1KB <= 64KB`
 
-Note that only the size of a POST body counts for the total limit.
+Note that the size of the URL and additional headers are added to the POST body when counting the total limit, to avoid a situation where data is encoded into the URL to circumvent the limitation.
 
-### Delegating Quota to Sub-frames
+### Delegating quota to subframes
 
-A top-level document can grant additional origins in its descendant to make fetchLater calls by the permissions policy [`deferred-fetch`][deferred-fetch],
-which also grants **and shares** the same quota to every of them.
-For example, the following iframes “frame-b” and “frame-c” all share the same quota from the their root document:
+By default, each cross-origin subframe, together with its same-origin descendants, is granted a deferred-fetching quota of 8KB. This is limited to the first 16 cross-origin iframes, with a total of 128KB.
+The top-level page can use permissions policy to tweak this quota: either increase an iframe's quota to 64KB, or revoke it in favor of other iframes. The top-level origin can also revoke this entire 128KB quota
+in favor of its own deferred fetches.
 
-[deferred-fetch]: https://github.com/w3c/webappsec-permissions-policy/issues/544
+An iframe is granted its quota upon navigable initialization (its creation or when some of its attributes are changed), based on its permission policy and remaining quota at that time. The quota is reserved for this iframe until its navigable is destroyed (e.g. the iframe is removed from the DOM), and the iframe's owner cannot observe whether the iframe's document or its descendants are using the quota in practice.
 
+By default, a subframe does not share its quota with descendant ("grandchildren" of the top level) cross-origin subframes.
+The subframes can use the same permission policies to grant part of the quota or all of it further down to descendant cross-origin subframes.
+
+### Permissions Policy: `deferred-fetch-full` and `deferred-fetch-minimal`
+
+The `deferred-fetch` and `deferred-fetch-minimal` policies determine how the overall 640KB is distributed between the top level origin and its cross-origin subframes.
+As mentioned before, by default the top level origin is granted 512KB and each cross-origin subframe is granted 8KB out of the rest of the 128KB.
+
+* The `deferred-fetch`, defaults to `self`, defines whether frames of this origin are granted the full quota for deferred fetching.
+* The `deferred-fetch-minimal`. defaults to `*` for the top level document and its same-origin descendants and `()` for cross-origin subframe, defines whether the frame is granted 8KB out of its parent's quota by default.
+* A frame that has the `deferred-fetch-minimal` permission set to `self` or `()`, does not delegates the minimal 8kb quota to subframes at all. Instead, the 128KB quota for iframes is added to its normal quota.
+* A cross-origin subframe that is granted a `deferred-fetch` permission, receives 64KB out of its parent's main quota, if the full 64KB are available at the time of its navigable's creation.
+* A cross-origin subframe can grant `deferred-fetch` to one of its cross-origin subframe descendants, delegating its entire quota. This only works if the quota is not used at all.
+* A cross-origin subframe can grant `deferred-fetch-minimal` to one or more of its descendants, granting `8kb` at a time if available.
+* Permission policy checks are not discernable from quota checks. Calling `fetchLater` will throw a `QuotaExceededError` regardless of the reason.
+
+Note: because of the nature of the perfmission policy API, documents would have to be granted the most relaxed policy needed for their descendants, and then restrict it per subframe.
+Permissions policy don't have semantics to have a strict default and relax it per subframe.
+
+See [`deferred-fetch` permissions policy issue](https://github.com/w3c/webappsec-permissions-policy/issues/544)
+
+#### Usage example
 ```html
 <!--
 In a top-level document from https://a.com
@@ -230,6 +247,46 @@ In the above example, the following requirements must be met:
 * Quota for request bodies for origin `https://a.com` X1+X4+X7 <= 64KB
 * Quota for request bodies for origin `https://b.com` X2+X5+X8 <= 64KB
 * Quota for request bodies for origin `https://c.com` X3+X6+X9 <= 64KB
+
+#### Quota delegation examplpes
+
+##### Using up the `minimal` quota:
+```
+Permissions-Policy: deferred-fetch=(self "https://b.com")
+```
+
+1. A subframe of `b.com` receives 64KB upon creation
+2. A subframe of `c.com` receives 8KB upon creation
+3. 15 more subframes of different origins would receive `8KB` upon creation
+4. The next subframe would not be greanted any quota.
+5. One of the subrames is removed. Its deferred fetches are sent.
+6. The next subframe would receive an 8KB quota again.
+
+##### Revoking the `minimal` quota altogether:
+```
+Permissions-Policy: deferred-fetch=(self "https://b.com")
+Permissions-Policy: deferred-fetch-minimal=()
+```
+1. A subframe of `b.com` receives 64KB upon creation
+2. A subframe of `c.com` receives no quota upon creation
+3. The top-level document and its same-origin descendants can use up the full 640KB.
+
+##### Delegating quota from a subframe to its own subframes:
+```
+# Top level
+Permissions-Policy: deferred-fetch=(self "https://b.com" "http://c.com" "https://d.com")
+
+# b.com
+Permissions-policy: deferred-fetch-minimal=*
+
+# c.com
+Permissions-policy: deferred-fetch=(self "https://d.com")
+```
+1. A subframe with `b.com` would be allowed to use 64KB
+2. A subframe of that `b.com` subframe would receive 8KB by default, out of those 64KB
+3. A subframe with `c.com` would be allowed to use 64KB
+4. If `c.com` has a `d.com` subframe, and `c.com` hasn't used any of its quota, its quota would be reserved for the `d.com` subframe.
+
 
 ## Security and Privacy
 
