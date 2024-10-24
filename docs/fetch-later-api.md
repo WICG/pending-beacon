@@ -186,7 +186,7 @@ By default, each cross-origin subframe, together with its same-origin descendant
 The top-level page can use permissions policy to tweak this quota: either increase an iframe's quota to 64KB, or revoke it in favor of other iframes. The top-level origin can also revoke this entire 128KB quota
 in favor of its own deferred fetches.
 
-An iframe is granted its quota upon navigable initialization (its creation or when some of its attributes are changed), based on its permission policy and remaining quota at that time. The quota is reserved for this iframe until its navigable is destroyed (e.g. the iframe is removed from the DOM), and the iframe's owner cannot observe whether the iframe's document or its descendants are using the quota in practice.
+An iframe is granted its quota upon being navigated from its parent, based on its permission policy and remaining quota at that time. The quota is reserved for this iframe until its navigable is destroyed (e.g. the iframe is removed from the DOM), and the iframe's owner cannot observe whether the iframe's document or its descendants are using the quota in practice.
 
 By default, a subframe does not share its quota with descendant ("grandchildren" of the top level) cross-origin subframes.
 The subframes can use the same permission policies to grant part of the quota or all of it further down to descendant cross-origin subframes.
@@ -199,7 +199,7 @@ As mentioned before, by default the top level origin is granted 512KB and each c
 * The `deferred-fetch`, defaults to `self`, defines whether frames of this origin are granted the full quota for deferred fetching.
 * The `deferred-fetch-minimal`. defaults to `*` for the top level document and its same-origin descendants and `()` for cross-origin subframe, defines whether the frame is granted 8KB out of its parent's quota by default.
 * A frame that has the `deferred-fetch-minimal` permission set to `self` or `()`, does not delegates the minimal 8kb quota to subframes at all. Instead, the 128KB quota for iframes is added to its normal quota.
-* A cross-origin subframe that is granted a `deferred-fetch` permission, receives 64KB out of its parent's main quota, if the full 64KB are available at the time of its navigable's creation.
+* A cross-origin subframe that is granted a `deferred-fetch` permission, receives 64KB out of its parent's main quota, if the full 64KB are available at the time of it's container-initiated navigation.
 * A cross-origin subframe can grant `deferred-fetch` to one of its cross-origin subframe descendants, delegating its entire quota. This only works if the quota is not used at all.
 * A cross-origin subframe can grant `deferred-fetch-minimal` to one or more of its descendants, granting `8kb` at a time if available.
 * Permission policy checks are not discernable from quota checks. Calling `fetchLater` will throw a `QuotaExceededError` regardless of the reason.
