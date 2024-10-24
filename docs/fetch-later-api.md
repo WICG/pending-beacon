@@ -197,11 +197,11 @@ The `deferred-fetch` and `deferred-fetch-minimal` policies determine how the ove
 As mentioned before, by default the top level origin is granted 512KB and each cross-origin subframe is granted 8KB out of the rest of the 128KB.
 
 * The `deferred-fetch`, defaults to `self`, defines whether frames of this origin are granted the full quota for deferred fetching.
-* The `deferred-fetch-minimal`. defaults to `*` for the top level document and its same-origin descendants and `()` for cross-origin subframe, defines whether the frame is granted 8KB out of its parent's quota by default.
-* A frame that has the `deferred-fetch-minimal` permission set to `self` or `()`, does not delegates the minimal 8kb quota to subframes at all. Instead, the 128KB quota for iframes is added to its normal quota.
+* The `deferred-fetch-minimal`. defaults to `*`, defines whether the frame is granted 8KB out of its parent's quota by default.
+* A top level frame that has the `deferred-fetch-minimal` permission set to `self` or `()`, does not delegates the minimal 8kb quota to subframes at all. Instead, the 128KB quota for iframes is added to its normal quota.
 * A cross-origin subframe that is granted a `deferred-fetch` permission, receives 64KB out of its parent's main quota, if the full 64KB are available at the time of it's container-initiated navigation.
 * A cross-origin subframe can grant `deferred-fetch` to one of its cross-origin subframe descendants, delegating its entire quota. This only works if the quota is not used at all.
-* A cross-origin subframe can grant `deferred-fetch-minimal` to one or more of its descendants, granting `8kb` at a time if available.
+* A cross-origin subframe cannot grant `deferred-fetch-minimal` to its descendants.
 * Permission policy checks are not discernable from quota checks. Calling `fetchLater` will throw a `QuotaExceededError` regardless of the reason.
 
 Note: because of the nature of the perfmission policy API, documents would have to be granted the most relaxed policy needed for their descendants, and then restrict it per subframe.
@@ -283,7 +283,6 @@ Permissions-policy: deferred-fetch-minimal=*
 Permissions-policy: deferred-fetch=(self "https://d.com")
 ```
 1. A subframe with `b.com` would be allowed to use 64KB
-2. A subframe of that `b.com` subframe would receive 8KB by default, out of those 64KB
 3. A subframe with `c.com` would be allowed to use 64KB
 4. If `c.com` has a `d.com` subframe, and `c.com` hasn't used any of its quota, its quota would be reserved for the `d.com` subframe.
 
