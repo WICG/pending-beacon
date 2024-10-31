@@ -25,7 +25,7 @@ Note that from the point of view of the API user, the exact send time is unknown
 ### Constraints
 
 * A deferred fetch request body, if exists, has to be a byte sequence. Streaming requests are not allowed.
-* A new permissions policy `deferred-fetch` is defined to control the feature availability and to delegate request quota. See [Permissions Policy and Quota](#permissions-policy-and-quota).
+* A new permissions policy `deferred-fetch` is defined to control the feature availability and to delegate request quota. See [Quota and permissions policy](#quota-and-permissions-policy).
 
 ## Key scenarios
 
