@@ -330,7 +330,7 @@ Note that there are discussions ([#3], [#30]) to address PendingBeacon (or fetch
 
 The [Background Fetch API][backgroundfetch-api] provides a way for service workers to defer processing until a user is connected.
 
-Similar to [BackgroundSync API](#1-backgroundsync-api), using BackGroundFetch also requires the control over a service worker, which is impossible for 3rd party iframes that want to perform beaconing.
+Similar to [BackgroundSync API](#1-backgroundsync-api), using BackGroundFetch also requires the control over a service worker, which is impossible for third-party iframes that want to perform beaconing.
 
 [backgroundfetch-api]: https://wicg.github.io/background-fetch/
 
