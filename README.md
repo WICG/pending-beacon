@@ -68,8 +68,8 @@ The followings are good-to-have:
 
 Previous proposals:
 
-* [fetch() with PendingRequest API](docs/fetch-with-pending-request-api.md): The transitional API proposal and discussions happened between PendingBeacon API and fetchLater API.
-* [PendingBeacon API](docs/pending-beacon-api.md): The initial experimental API, available as Chrome Origin Trial from M107 to M115.
+* [DEPRECATED] [fetch() with PendingRequest API](docs/fetch-with-pending-request-api.md): The transitional API proposal and discussions happened between PendingBeacon API and fetchLater API.
+* [DEPRECATED] [PendingBeacon API](docs/pending-beacon-api.md): The initial experimental API, available as Chrome Origin Trial from M107 to M115.
 
 ## Draft Specification
 
