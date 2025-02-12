@@ -11,16 +11,18 @@ See [Motivation - Pending Beacon API](../README.md#motivation).
 
 ## Overview
 
-`fetchLater()` is a JavaScript API to request a deferred fetch. Once requested, the deferred request is queued by the browser, and will be invoked in one of the following scenarios:
+`fetchLater()` is a JavaScript API to request a deferred fetch. Once called in a document, a deferred request is queued by the browser in the PENDING state, and will be invoked by the **earliest** of the following conditions:
 
 * The document is destroyed.
-* After a user-specified time, even if the document is in bfcache.
-* Browser decides its time to send it.
+* After a user-specified time. For [privacy reason][bfcache-flush], all pending requests will be flushed upon document entering bfcache no matter how much time is left.
+* Browser decides it's time to send it.
 
 The API returns a `FetchLaterResult` that contains a read-only boolean field `activated` that may be updated by Browser to tell whether the deferred request has been sent out or not.
-On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated, as the page is already gone.
+On successful sending, the whole response will be ignored, including body and headers. Nothing at all should be processed or updated, as the page may already be gone.
 
-Note that from the point of view of the API user, the exact send time is unknown.
+Note that from the point of view of the API user, the exact sending time is always unknown.
+
+[bfcache-flush]: https://github.com/WICG/pending-beacon/issues/30#issuecomment-1888554622
 
 ### Constraints
 
