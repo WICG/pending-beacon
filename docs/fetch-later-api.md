@@ -254,7 +254,7 @@ In the above example, the following requirements must be met:
 
 ##### Using up the `minimal` quota
 
-```
+```http
 Permissions-Policy: deferred-fetch=(self "https://b.com")
 ```
 
@@ -267,7 +267,7 @@ Permissions-Policy: deferred-fetch=(self "https://b.com")
 
 ##### Revoking the `minimal` quota altogether
 
-```
+```http
 Permissions-Policy: deferred-fetch=(self "https://b.com")
 Permissions-Policy: deferred-fetch-minimal=()
 ```
@@ -278,7 +278,7 @@ Permissions-Policy: deferred-fetch-minimal=()
 
 ##### Delegating quota from a subframe to its own subframes
 
-```
+```http
 # Top level
 Permissions-Policy: deferred-fetch=(self "https://b.com" "http://c.com" "https://d.com")
 
