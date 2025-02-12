@@ -187,7 +187,8 @@ By default, each cross-origin subframe, together with its same-origin descendant
 The top-level page can use permissions policy to tweak this quota: either increase an iframe's quota to 64KB, or revoke it in favor of other iframes. The top-level origin can also revoke this entire 128KB quota
 in favor of its own deferred fetches.
 
-An iframe is granted its quota upon being navigated from its parent, based on its permission policy and remaining quota at that time. The quota is reserved for this iframe until its navigable is destroyed (e.g. the iframe is removed from the DOM), and the iframe's owner cannot observe whether the iframe's document or its descendants are using the quota in practice.
+An iframe is granted its quota upon being navigated from its parent, based on its permission policy and remaining quota at that time.
+The quota is reserved for this iframe until its navigable is destroyed (e.g. the iframe is removed from the DOM), and the iframe's owner cannot observe whether the iframe's document or its descendants are using the quota in practice.
 
 By default, a subframe does not share its quota with descendant ("grandchildren" of the top level) cross-origin subframes.
 The subframes can use the same permission policies to grant part of the quota or all of it further down to descendant cross-origin subframes.
