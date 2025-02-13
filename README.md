@@ -1,7 +1,6 @@
 # Pending Beacon API
 
 [![Super-Linter](https://github.com/WICG/pending-beacon/actions/workflows/linter.yml/badge.svg)](https://github.com/WICG/pending-beacon/actions/workflows/linter.yml)
-[![Spec Prod](https://github.com/WICG/pending-beacon/actions/workflows/auto-publish.yml/badge.svg)](https://github.com/WICG/pending-beacon/actions/workflows/auto-publish.yml)
 
 Authors: [Darren Willis](https://github.com/darrenw), [Fergal Daly](https://github.com/fergald), [Ming-Ying Chung](https://github.com/mingyc) - Google
 
@@ -71,9 +70,10 @@ Previous proposals:
 * [DEPRECATED] [fetch() with PendingRequest API](docs/fetch-with-pending-request-api.md): The transitional API proposal and discussions happened between PendingBeacon API and fetchLater API.
 * [DEPRECATED] [PendingBeacon API](docs/pending-beacon-api.md): The initial experimental API, available as Chrome Origin Trial from M107 to M115.
 
-## Draft Specification
+## Specification
 
-[Deferred fetching PR - whatwg/fetch](https://whatpr.org/fetch/1647/094ea69...152d725.html)
+* Deferred fetching - whatwg/fetch: [PR](https://github.com/whatwg/fetch/pull/1647), [Spec Preview](https://whatpr.org/fetch/1647.html#dom-global-fetch-later)
+* Reserve/free quota for fetchLater - whatwg/html: [PR](https://github.com/whatwg/html/pull/10903)
 
 ## Alternatives Considered
 
@@ -83,7 +83,7 @@ See [Alternative Approaches](docs/alternative-approaches.md).
 
 * [WebKit Standards Positions](https://github.com/WebKit/standards-positions/issues/85)
 * [Mozilla Standards Positions](https://github.com/mozilla/standards-positions/issues/703)
-* [TAG Design Review](https://github.com/w3ctag/design-reviews/issues/776)
+* [TAG Design Review](https://github.com/w3ctag/design-reviews/issues/887)
 * Yours - [Open an issue](https://github.com/WICG/pending-beacon/issues/new)
 
 [`XMLHttpRequest`]: https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
