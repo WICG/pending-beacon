@@ -2,8 +2,8 @@
 
 *This document is an explainer for fetchLater() API. It is evolved from a series of [discussions and concerns](https://github.com/WICG/pending-beacon/issues/70) around the experimental PendingBeacon API and the draft PendingRequest API.*
 
-* [Specification PR](https://github.com/whatwg/fetch/pull/1647)
-* [Draft Specification](https://whatpr.org/fetch/1647/9ca4bda...37a66c9.html)
+* Deferred fetching - whatwg/fetch: [PR](https://github.com/whatwg/fetch/pull/1647), [Spec Preview](https://whatpr.org/fetch/1647.html#dom-global-fetch-later)
+* Reserve/free quota for fetchLater - whatwg/html: [PR](https://github.com/whatwg/html/pull/10903)
 
 ## Motivation
 
