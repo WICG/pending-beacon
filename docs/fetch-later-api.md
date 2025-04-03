@@ -31,10 +31,9 @@ Note that from the point of view of the API user, the exact sending time is alwa
 
 ## Key scenarios
 
-### Defer a `GET` request until page is destroyed or evicted from bfcache
+### Defer a `GET` request until page is destroyed or entering bfcache
 
-No matter the request succeeds or not, the browser will drop the response or
-error from server, and the caller will not be able to tell.
+> **NOTE**: No matter the request succeeds or not, the browser will drop the response or error from server, and the API user will not be able to tell the difference.
 
 ```js
 fetchLater('/send_beacon');
@@ -53,6 +52,8 @@ fetchLater({
 ```
 
 ### Send a request when page is abondoned
+
+The following code tries to ensure `fetchLater()` is called right at various pagelife cycle events that may indicate end of a page visit (but not covering all possible scenarios).
 
 ```js
 let beaconResult = null;
