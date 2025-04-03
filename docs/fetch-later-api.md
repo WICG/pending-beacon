@@ -27,7 +27,7 @@ Note that from the point of view of the API user, the exact sending time is alwa
 ### Constraints
 
 * A deferred fetch request body, if exists, has to be a byte sequence. Streaming requests are not allowed.
-* A new permissions policy `deferred-fetch` is defined to control the feature availability and to delegate request quota. See [Quota and permissions policy](#quota-and-permissions-policy).
+* Two new permissions policies `deferred-fetch` and `deferred-fetch-minimal` are defined to control the feature availability and to delegate request quota. See [Quota and permissions policy](#quota-and-permissions-policy).
 
 ## Key scenarios
 
@@ -195,7 +195,7 @@ The quota is reserved for this iframe until its navigable is destroyed (e.g. the
 By default, a subframe does not share its quota with descendant ("grandchildren" of the top level) cross-origin subframes.
 The subframes can use the same permission policies to grant part of the quota or all of it further down to descendant cross-origin subframes.
 
-### Permissions Policy: `deferred-fetch-full` and `deferred-fetch-minimal`
+### Permissions Policy: `deferred-fetch` and `deferred-fetch-minimal`
 
 The `deferred-fetch` and `deferred-fetch-minimal` policies determine how the overall 640KB is distributed between the top level origin and its cross-origin subframes.
 As mentioned before, by default the top level origin is granted 512KB and each cross-origin subframe is granted 8KB out of the rest of the 128KB.
