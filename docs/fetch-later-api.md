@@ -47,7 +47,6 @@ fetchLater('/send_beacon');
 fetchLater(
   '/send_beacon',
   {
-    url: 
     method: 'POST',
     body: getBeaconData(),
     activateAfter: 60000 /* 1 minute */
