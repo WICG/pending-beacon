@@ -51,15 +51,19 @@ fetchLater({
 }, {activateAfter: 60000 /* 1 minute */});
 ```
 
-### Send a request when page is abondoned
+### Send a request when page is abandoned
 
 The following code tries to ensure `fetchLater()` is called right at various pagelife cycle events that may indicate end of a page visit (but not covering all possible scenarios).
 
 ```js
 let beaconResult = null;
 
+function hasPendingBeacon() {
+  return isPreviousBeaconPending = beaconResult && !beaconResult.activated;
+}
+
 function createBeacon(data) {
-  if (beaconResult && beaconResult.activated) {
+  if (hasPendingBeacon()) {
     // Avoid creating duplicated beacon if the previous one is still pending.
     return;
   }
@@ -82,9 +86,12 @@ addEventListener('visibilitychange', () => {
 let beaconResult = null;
 let beaconAbort = null;
 
+function hasPendingBeacon() {
+  return isPreviousBeaconPending = beaconResult && !beaconResult.activated;
+}
+
 function updateBeacon(data) {
-  const pending = !beaconResult || !beaconResult.activated;
-  if (pending && beaconAbort) {
+  if (hasPendingBeacon() && beaconAbort) {
     beaconAbort.abort();
   }
 
@@ -92,7 +99,7 @@ function updateBeacon(data) {
 }
 
 function createBeacon(data) {
-  if (beaconResult && beaconResult.activated) {
+  if (hasPendingBeacon()) {
     // Avoid creating duplicated beacon if the previous one is still pending.
     return;
   }
