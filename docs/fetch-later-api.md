@@ -285,7 +285,7 @@ Permissions-Policy: deferred-fetch-minimal=()
 
 1. A subframe of `b.com` receives 64KB upon creation.
 1. A subframe of `c.com` receives no quota upon creation.
-1. The top-level document and its same-origin descendants can use up the full 640KB.
+1. The top-level document and its same-origin descendants can use up the full 640KB (unless a `https://b.com` subframe is created in which case they are left with 576KB).
 
 ##### Delegating quota from a subframe to its own subframes
 
