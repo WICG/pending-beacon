@@ -44,11 +44,14 @@ fetchLater('/send_beacon');
 > **NOTE**: **The actual sending time is unknown**, as the browser may wait for a longer or shorter period of time, e.g., to optimize batching of deferred fetches.
 
 ```js
-fetchLater({
-  url: '/send_beacon'
-  method: 'POST'
-  body: getBeaconData(),
-}, {activateAfter: 60000 /* 1 minute */});
+fetchLater(
+  '/send_beacon',
+  {
+    method: 'POST',
+    body: getBeaconData(),
+    activateAfter: 60000 /* 1 minute */
+  }
+);
 ```
 
 ### Send a request when page is abandoned
